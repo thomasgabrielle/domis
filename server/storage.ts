@@ -140,9 +140,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateHousehold(id: string, householdData: Partial<InsertHousehold>, membersData: any[]): Promise<{ household: Household; members: HouseholdMember[] }> {
+    const cleanedHouseholdData = { ...householdData };
+    if (cleanedHouseholdData.intakeDate && typeof cleanedHouseholdData.intakeDate === 'string') {
+      cleanedHouseholdData.intakeDate = new Date(cleanedHouseholdData.intakeDate);
+    }
+    if (cleanedHouseholdData.proxyDateOfBirth && typeof cleanedHouseholdData.proxyDateOfBirth === 'string') {
+      cleanedHouseholdData.proxyDateOfBirth = new Date(cleanedHouseholdData.proxyDateOfBirth);
+    }
+    
     await db.update(households)
       .set({
-        ...householdData,
+        ...cleanedHouseholdData,
         updatedAt: new Date()
       })
       .where(eq(households.id, id));
