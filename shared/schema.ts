@@ -80,6 +80,14 @@ export const householdMembers = pgTable("household_members", {
   disabilityStatus: boolean("disability_status").default(false),
   isHead: boolean("is_head").default(false),
   
+  maritalStatus: text("marital_status"),
+  educationLevel: text("education_level"),
+  professionalCertifications: text("professional_certifications"),
+  currentEducationEnrolment: text("current_education_enrolment"),
+  ongoingCertification: text("ongoing_certification"),
+  professionalSituation: text("professional_situation"),
+  employerDetails: text("employer_details"),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
