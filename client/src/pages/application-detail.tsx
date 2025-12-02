@@ -141,6 +141,7 @@ export function ApplicationDetail() {
           <Button 
             variant="ghost" 
             size="icon" 
+            className="cursor-pointer"
             onClick={() => setLocation('/worksheet')}
             data-testid="button-back"
           >
