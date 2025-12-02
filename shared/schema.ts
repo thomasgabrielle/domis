@@ -30,6 +30,19 @@ export const households = pgTable("households", {
   followUpNotes: text("follow_up_notes"),
   attachmentUrl: text("attachment_url"),
   
+  // Proxy Information
+  proxyFirstName: text("proxy_first_name"),
+  proxyLastName: text("proxy_last_name"),
+  proxyAlias: text("proxy_alias"),
+  proxyGender: text("proxy_gender"),
+  proxyDateOfBirth: timestamp("proxy_date_of_birth"),
+  proxyAddress: text("proxy_address"),
+  proxyPhone: text("proxy_phone"),
+  proxyNationalId: text("proxy_national_id"),
+  proxyReason: text("proxy_reason"),
+  proxyRelationship: text("proxy_relationship"),
+  proxyRole: text("proxy_role"),
+  
   // Location
   province: text("province").notNull(),
   district: text("district").notNull(),

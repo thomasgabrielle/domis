@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Plus, Trash2, MapPin, User, FileText, Upload, Calendar } from "lucide-react";
+import { Plus, Trash2, MapPin, User, FileText, Upload, Calendar, UserCheck } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 
@@ -96,6 +96,17 @@ export function Registration() {
       requestPurpose: formData.get("requestPurpose") as string || null,
       actionTaken: formData.get("actionTaken") as string || null,
       followUpNotes: formData.get("followUpNotes") as string || null,
+      proxyFirstName: formData.get("proxyFirstName") as string || null,
+      proxyLastName: formData.get("proxyLastName") as string || null,
+      proxyAlias: formData.get("proxyAlias") as string || null,
+      proxyGender: formData.get("proxyGender") as string || null,
+      proxyDateOfBirth: formData.get("proxyDateOfBirth") as string || null,
+      proxyAddress: formData.get("proxyAddress") as string || null,
+      proxyPhone: formData.get("proxyPhone") as string || null,
+      proxyNationalId: formData.get("proxyNationalId") as string || null,
+      proxyReason: formData.get("proxyReason") as string || null,
+      proxyRelationship: formData.get("proxyRelationship") as string || null,
+      proxyRole: formData.get("proxyRole") as string || null,
       programStatus: "pending_assessment",
     };
 
@@ -321,6 +332,129 @@ export function Registration() {
                       <MapPin className="h-4 w-4" />
                     </Button>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Proxy Information */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <UserCheck className="h-5 w-5 text-primary" />
+                  <CardTitle>Proxy Information</CardTitle>
+                </div>
+                <CardDescription>If someone is applying on behalf of the applicant, enter their details here.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="proxyFirstName">Proxy First Name</Label>
+                  <Input 
+                    id="proxyFirstName" 
+                    name="proxyFirstName" 
+                    placeholder="First name"
+                    data-testid="input-proxy-first-name" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="proxyLastName">Proxy Last Name</Label>
+                  <Input 
+                    id="proxyLastName" 
+                    name="proxyLastName" 
+                    placeholder="Last name"
+                    data-testid="input-proxy-last-name" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="proxyAlias">Proxy Alias</Label>
+                  <Input 
+                    id="proxyAlias" 
+                    name="proxyAlias" 
+                    placeholder="Alias / Nickname"
+                    data-testid="input-proxy-alias" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="proxyGender">Proxy Gender</Label>
+                  <Select name="proxyGender">
+                    <SelectTrigger id="proxyGender" data-testid="select-proxy-gender">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="proxyDateOfBirth">Proxy Date of Birth</Label>
+                  <Input 
+                    id="proxyDateOfBirth" 
+                    name="proxyDateOfBirth" 
+                    type="date"
+                    data-testid="input-proxy-dob" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="proxyNationalId">Proxy National ID</Label>
+                  <Input 
+                    id="proxyNationalId" 
+                    name="proxyNationalId" 
+                    placeholder="ID Number"
+                    data-testid="input-proxy-national-id" 
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="proxyAddress">Proxy Address</Label>
+                  <Input 
+                    id="proxyAddress" 
+                    name="proxyAddress" 
+                    placeholder="Full address"
+                    data-testid="input-proxy-address" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="proxyPhone">Proxy Phone</Label>
+                  <Input 
+                    id="proxyPhone" 
+                    name="proxyPhone" 
+                    type="tel"
+                    placeholder="Phone number"
+                    data-testid="input-proxy-phone" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="proxyRelationship">Proxy Relationship to Applicant</Label>
+                  <Select name="proxyRelationship">
+                    <SelectTrigger id="proxyRelationship" data-testid="select-proxy-relationship">
+                      <SelectValue placeholder="Select relationship" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="family">Family</SelectItem>
+                      <SelectItem value="friend">Friend</SelectItem>
+                      <SelectItem value="neighbor">Neighbor</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="proxyRole">Proxy Role</Label>
+                  <Input 
+                    id="proxyRole" 
+                    name="proxyRole" 
+                    placeholder="e.g., Caregiver, Legal Guardian"
+                    data-testid="input-proxy-role" 
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-3">
+                  <Label htmlFor="proxyReason">Reason for Proxy</Label>
+                  <Textarea 
+                    id="proxyReason" 
+                    name="proxyReason" 
+                    placeholder="Explain why a proxy is needed..."
+                    rows={2}
+                    data-testid="textarea-proxy-reason" 
+                  />
                 </div>
               </CardContent>
             </Card>
