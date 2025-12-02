@@ -87,6 +87,7 @@ export const householdMembers = pgTable("household_members", {
   ongoingCertification: text("ongoing_certification"),
   professionalSituation: text("professional_situation"),
   employerDetails: text("employer_details"),
+  incomeType: text("income_type"),
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

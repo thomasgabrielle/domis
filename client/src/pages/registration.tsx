@@ -41,6 +41,7 @@ type MemberForm = {
   ongoingCertification: string;
   professionalSituation: string;
   employerDetails: string;
+  incomeType: string[];
 };
 
 const CERTIFICATION_OPTIONS = [
@@ -60,6 +61,21 @@ const CERTIFICATION_OPTIONS = [
   { value: "mining_quarrying", label: "Mining and Quarrying" },
   { value: "personal_care", label: "Personal Care (Barbershops, Hair Salons, Nail Technicians, Spas)" },
   { value: "professional_admin", label: "Professional and Administrative Services" },
+];
+
+const INCOME_TYPE_OPTIONS = [
+  { value: "none", label: "None" },
+  { value: "main_work_income", label: "Main work income" },
+  { value: "additional_work_income", label: "Additional work income" },
+  { value: "dominica_gov_pension", label: "Dominica Gov. Pension" },
+  { value: "private_pension", label: "Private pension" },
+  { value: "dominica_social_security", label: "Dominica Social Security Pension" },
+  { value: "foreign_pension", label: "Foreign pension (in respect of public service with another Government, or an International Organization)" },
+  { value: "investment_income", label: "Monthly income from investments (ex: dividends)" },
+  { value: "rental_income", label: "Monthly rental" },
+  { value: "maintenance_alimony", label: "Monthly maintenance, alemonies" },
+  { value: "other_sources", label: "Monthly other sources (ex: insurance pay-out)" },
+  { value: "family_support", label: "Family support" },
 ];
 
 type HouseholdForm = {
@@ -89,6 +105,7 @@ type DuplicateMember = {
   ongoingCertification?: string | null;
   professionalSituation?: string | null;
   employerDetails?: string | null;
+  incomeType?: string | null;
 };
 
 type DuplicateResult = {
@@ -132,6 +149,7 @@ export function Registration() {
       ongoingCertification: "",
       professionalSituation: "",
       employerDetails: "",
+      incomeType: [],
     }
   ]);
   
@@ -235,6 +253,7 @@ export function Registration() {
       ongoingCertification: member.ongoingCertification || null,
       professionalSituation: member.professionalSituation || null,
       employerDetails: member.employerDetails || null,
+      incomeType: member.incomeType.length > 0 ? member.incomeType.join(",") : null,
     }));
 
     createHouseholdMutation.mutate({
@@ -259,6 +278,7 @@ export function Registration() {
       ongoingCertification: "",
       professionalSituation: "",
       employerDetails: "",
+      incomeType: [],
     }]);
   };
 
@@ -339,6 +359,7 @@ export function Registration() {
         ongoingCertification: m.ongoingCertification || "",
         professionalSituation: m.professionalSituation || "",
         employerDetails: m.employerDetails || "",
+        incomeType: m.incomeType ? m.incomeType.split(",") : [],
       }));
       
       setMembers(newMembers);
@@ -367,6 +388,7 @@ export function Registration() {
         ongoingCertification: member.ongoingCertification || "",
         professionalSituation: member.professionalSituation || "",
         employerDetails: member.employerDetails || "",
+        incomeType: member.incomeType ? member.incomeType.split(",") : [],
       };
       setMembers(newMembers);
       setDuplicateBlocked(prev => ({ ...prev, [memberIndex]: false }));
@@ -1195,6 +1217,93 @@ export function Registration() {
                           className="min-h-[80px]"
                           data-testid={`input-employer-details-${index}`}
                         />
+                      </div>
+                    </div>
+                    
+                    <Separator className="my-6" />
+                    
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-muted-foreground">Income</h4>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor={`incomeType-${index}`}>Income Type</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className="w-full justify-between font-normal"
+                              data-testid={`select-income-type-${index}`}
+                            >
+                              {member.incomeType.length > 0
+                                ? `${member.incomeType.length} selected`
+                                : "Select income types..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[400px] p-0" align="start">
+                            <ScrollArea className="h-[300px] p-4">
+                              <div className="space-y-2">
+                                {INCOME_TYPE_OPTIONS.map((option) => (
+                                  <div key={option.value} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`income-${index}-${option.value}`}
+                                      checked={member.incomeType.includes(option.value)}
+                                      onCheckedChange={(checked) => {
+                                        const newMembers = [...members];
+                                        if (checked) {
+                                          if (option.value === "none") {
+                                            newMembers[index].incomeType = ["none"];
+                                          } else {
+                                            const filtered = newMembers[index].incomeType.filter(v => v !== "none");
+                                            newMembers[index].incomeType = [...filtered, option.value];
+                                          }
+                                        } else {
+                                          newMembers[index].incomeType = 
+                                            newMembers[index].incomeType.filter(v => v !== option.value);
+                                        }
+                                        setMembers(newMembers);
+                                      }}
+                                    />
+                                    <Label
+                                      htmlFor={`income-${index}-${option.value}`}
+                                      className="text-sm font-normal cursor-pointer"
+                                    >
+                                      {option.label}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            </ScrollArea>
+                          </PopoverContent>
+                        </Popover>
+                        {member.incomeType.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {member.incomeType.map((incomeValue) => {
+                              const income = INCOME_TYPE_OPTIONS.find(o => o.value === incomeValue);
+                              return (
+                                <span
+                                  key={incomeValue}
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-muted rounded-md"
+                                >
+                                  {income?.label || incomeValue}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newMembers = [...members];
+                                      newMembers[index].incomeType = 
+                                        newMembers[index].incomeType.filter(v => v !== incomeValue);
+                                      setMembers(newMembers);
+                                    }}
+                                    className="hover:text-destructive"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
