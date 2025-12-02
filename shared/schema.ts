@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, numeric, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -7,12 +7,222 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull(),
+  role: text("role").notNull().default("case_worker"),
+  department: text("department"),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const households = pgTable("households", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  householdCode: text("household_code").notNull().unique(),
+  registrationDate: timestamp("registration_date").defaultNow().notNull(),
+  
+  // Location
+  province: text("province").notNull(),
+  district: text("district").notNull(),
+  village: text("village").notNull(),
+  gpsCoordinates: text("gps_coordinates"),
+  
+  // Assessment
+  vulnerabilityScore: integer("vulnerability_score").default(0),
+  lastAssessmentDate: timestamp("last_assessment_date"),
+  
+  // Status
+  programStatus: text("program_status").notNull().default("pending_assessment"),
+  enrollmentDate: timestamp("enrollment_date"),
+  
+  // Case Management
+  assignedSocialWorkerId: varchar("assigned_social_worker_id").references(() => users.id),
+  
+  // Metadata
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const householdMembers = pgTable("household_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  householdId: varchar("household_id").references(() => households.id, { onDelete: "cascade" }).notNull(),
+  
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  dateOfBirth: timestamp("date_of_birth").notNull(),
+  gender: text("gender").notNull(),
+  relationshipToHead: text("relationship_to_head").notNull(),
+  nationalId: text("national_id"),
+  disabilityStatus: boolean("disability_status").default(false),
+  isHead: boolean("is_head").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const assessments = pgTable("assessments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  householdId: varchar("household_id").references(() => households.id, { onDelete: "cascade" }).notNull(),
+  
+  // Assessment details
+  assessmentType: text("assessment_type").notNull().default("pmt"),
+  assessmentDate: timestamp("assessment_date").defaultNow().notNull(),
+  assessedBy: varchar("assessed_by").references(() => users.id),
+  
+  // Scores
+  rawScore: integer("raw_score").notNull(),
+  adjustedScore: integer("adjusted_score").notNull(),
+  
+  // Decision
+  decision: text("decision").notNull(),
+  justification: text("justification"),
+  
+  // Additional data
+  housingType: text("housing_type"),
+  incomeSource: text("income_source"),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const grievances = pgTable("grievances", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  grievanceCode: text("grievance_code").notNull().unique(),
+  householdId: varchar("household_id").references(() => households.id),
+  
+  dateFiled: timestamp("date_filed").defaultNow().notNull(),
+  category: text("category").notNull(),
+  description: text("description").notNull(),
+  
+  status: text("status").notNull().default("open"),
+  priority: text("priority").default("medium"),
+  
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  resolution: text("resolution"),
+  resolvedDate: timestamp("resolved_date"),
+  
+  filedBy: text("filed_by"),
+  contactInfo: text("contact_info"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  paymentCode: text("payment_code").notNull().unique(),
+  householdId: varchar("household_id").references(() => households.id, { onDelete: "cascade" }).notNull(),
+  
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  cycle: text("cycle").notNull(),
+  programId: varchar("program_id").references(() => programs.id),
+  
+  status: text("status").notNull().default("pending"),
+  provider: text("provider").notNull(),
+  disbursementDate: timestamp("disbursement_date"),
+  
+  transactionRef: text("transaction_ref"),
+  failureReason: text("failure_reason"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const programs = pgTable("programs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("active"),
+  
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  
+  eligibilityCriteria: jsonb("eligibility_criteria"),
+  benefitAmount: numeric("benefit_amount", { precision: 10, scale: 2 }),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const caseActivities = pgTable("case_activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  householdId: varchar("household_id").references(() => households.id, { onDelete: "cascade" }).notNull(),
+  
+  activityType: text("activity_type").notNull(),
+  activityDate: timestamp("activity_date").defaultNow().notNull(),
+  description: text("description").notNull(),
+  
+  performedBy: varchar("performed_by").references(() => users.id),
+  attachmentUrl: text("attachment_url"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert Schemas
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertHouseholdSchema = createInsertSchema(households).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertHouseholdMemberSchema = createInsertSchema(householdMembers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAssessmentSchema = createInsertSchema(assessments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertGrievanceSchema = createInsertSchema(grievances).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProgramSchema = createInsertSchema(programs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCaseActivitySchema = createInsertSchema(caseActivities).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export type InsertHousehold = z.infer<typeof insertHouseholdSchema>;
+export type Household = typeof households.$inferSelect;
+
+export type InsertHouseholdMember = z.infer<typeof insertHouseholdMemberSchema>;
+export type HouseholdMember = typeof householdMembers.$inferSelect;
+
+export type InsertAssessment = z.infer<typeof insertAssessmentSchema>;
+export type Assessment = typeof assessments.$inferSelect;
+
+export type InsertGrievance = z.infer<typeof insertGrievanceSchema>;
+export type Grievance = typeof grievances.$inferSelect;
+
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type Payment = typeof payments.$inferSelect;
+
+export type InsertProgram = z.infer<typeof insertProgramSchema>;
+export type Program = typeof programs.$inferSelect;
+
+export type InsertCaseActivity = z.infer<typeof insertCaseActivitySchema>;
+export type CaseActivity = typeof caseActivities.$inferSelect;
