@@ -37,6 +37,7 @@ type HouseholdForm = {
 export function Registration() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [hasProxy, setHasProxy] = useState(false);
   const [members, setMembers] = useState<MemberForm[]>([
     {
       firstName: "",
@@ -209,7 +210,11 @@ export function Registration() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="isOnOwnBehalf">Is this person here on their own behalf?</Label>
-                  <Select name="isOnOwnBehalf" required>
+                  <Select 
+                    name="isOnOwnBehalf" 
+                    required
+                    onValueChange={(value) => setHasProxy(value === "no")}
+                  >
                     <SelectTrigger id="isOnOwnBehalf" data-testid="select-own-behalf">
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
@@ -336,14 +341,15 @@ export function Registration() {
               </CardContent>
             </Card>
 
-            {/* Proxy Information */}
-            <Card>
+            {/* Proxy Information - Only shown when proxy is selected */}
+            {hasProxy && (
+            <Card className="animate-in fade-in slide-in-from-top-2">
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <UserCheck className="h-5 w-5 text-primary" />
                   <CardTitle>Proxy Information</CardTitle>
                 </div>
-                <CardDescription>If someone is applying on behalf of the applicant, enter their details here.</CardDescription>
+                <CardDescription>Enter the details of the person applying on behalf of the applicant.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
@@ -458,8 +464,9 @@ export function Registration() {
                 </div>
               </CardContent>
             </Card>
+            )}
 
-            {/* Household Members */}
+            {/* Applicant Information */}
             <Card>
               <CardHeader>
                  <div className="flex items-center justify-between">
