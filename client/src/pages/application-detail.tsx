@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, User, MapPin, Calendar, Phone, FileText, Users } from "lucide-react";
+import { ArrowLeft, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 
@@ -11,6 +11,15 @@ export function ApplicationDetail() {
   const [, setLocation] = useLocation();
   const params = useParams<{ id: string }>();
   const householdId = params.id;
+
+  const { data: allHouseholds = [] } = useQuery({
+    queryKey: ['households'],
+    queryFn: async () => {
+      const response = await fetch('/api/households');
+      if (!response.ok) throw new Error('Failed to fetch households');
+      return response.json();
+    },
+  });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['household', householdId],
@@ -21,6 +30,23 @@ export function ApplicationDetail() {
     },
     enabled: !!householdId,
   });
+
+  const currentIndex = allHouseholds.findIndex((h: any) => h.id === householdId);
+  const totalApplications = allHouseholds.length;
+  const hasPrevious = currentIndex > 0;
+  const hasNext = currentIndex < totalApplications - 1;
+
+  const goToPrevious = () => {
+    if (hasPrevious) {
+      setLocation(`/application/${allHouseholds[currentIndex - 1].id}`);
+    }
+  };
+
+  const goToNext = () => {
+    if (hasNext) {
+      setLocation(`/application/${allHouseholds[currentIndex + 1].id}`);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -158,6 +184,35 @@ export function ApplicationDetail() {
               Household Code: <span className="font-mono">{household.householdCode}</span>
             </p>
           </div>
+          {totalApplications > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                Viewing {currentIndex + 1} of {totalApplications}
+              </span>
+              <div className="flex gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={goToPrevious}
+                  disabled={!hasPrevious}
+                  className="cursor-pointer"
+                  data-testid="button-previous"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={goToNext}
+                  disabled={!hasNext}
+                  className="cursor-pointer"
+                  data-testid="button-next"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Intake Information */}
@@ -354,8 +409,28 @@ export function ApplicationDetail() {
         </Card>
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-4">
-          <Button variant="outline" onClick={() => setLocation('/worksheet')} data-testid="button-back-to-list">
+        <div className="flex justify-between items-center">
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={goToPrevious}
+              disabled={!hasPrevious}
+              className="gap-2 cursor-pointer"
+              data-testid="button-previous-bottom"
+            >
+              <ChevronLeft className="h-4 w-4" /> Previous
+            </Button>
+            <Button
+              variant="outline"
+              onClick={goToNext}
+              disabled={!hasNext}
+              className="gap-2 cursor-pointer"
+              data-testid="button-next-bottom"
+            >
+              Next <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button variant="outline" onClick={() => setLocation('/worksheet')} className="cursor-pointer" data-testid="button-back-to-list">
             Back to Applications
           </Button>
         </div>
