@@ -155,7 +155,7 @@ export function Registration() {
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
           <h1 className="text-3xl font-heading font-bold text-foreground">Intake</h1>
-          <p className="text-muted-foreground">Create a new household profile for the Public Assistance Program.</p>
+          <p className="text-muted-foreground">Create a new application for the Public Assistance Program.</p>
         </div>
 
         <form onSubmit={handleSubmit}>
