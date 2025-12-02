@@ -201,8 +201,11 @@ export const insertHouseholdSchema = createInsertSchema(households, {
   updatedAt: true,
 });
 
-export const insertHouseholdMemberSchema = createInsertSchema(householdMembers).omit({
+export const insertHouseholdMemberSchema = createInsertSchema(householdMembers, {
+  dateOfBirth: z.coerce.date(),
+}).omit({
   id: true,
+  householdId: true,
   createdAt: true,
 });
 
