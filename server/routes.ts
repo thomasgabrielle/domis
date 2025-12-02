@@ -142,7 +142,8 @@ export async function registerRoutes(
         res.json({
           found: true,
           member: result.member,
-          household: result.household
+          household: result.household,
+          allMembers: result.allMembers
         });
       } else {
         res.json({ found: false });
