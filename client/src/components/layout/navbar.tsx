@@ -13,10 +13,10 @@ export function Navbar() {
     { href: "/", label: "Dashboard", icon: Building2 },
     { href: "/registration", label: "Intake", icon: Users },
     { href: "/assessments", label: "Assessments", icon: ClipboardCheck },
+    { href: "/worksheet", label: "Registry", icon: FileSpreadsheet },
     { href: "/cases", label: "Case Mgmt", icon: Briefcase },
     { href: "/payments", label: "Payments", icon: CreditCard },
     { href: "/grievances", label: "Grievances", icon: AlertCircle },
-    { href: "/worksheet", label: "Registry", icon: FileSpreadsheet },
     { href: "/reports", label: "M&E", icon: BarChart3 },
   ];
 
