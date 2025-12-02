@@ -3,12 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, XCircle, FileCheck, Calculator } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { CheckCircle2, XCircle, FileCheck } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +25,7 @@ export function Assessments() {
   const queryClient = useQueryClient();
   const [selectedHousehold, setSelectedHousehold] = useState<any>(null);
   const [assessmentFormOpen, setAssessmentFormOpen] = useState(false);
+  const [assessmentDecision, setAssessmentDecision] = useState<'eligible' | 'ineligible'>('eligible');
 
   const { data: households = [], isLoading } = useQuery({
     queryKey: ['households'],
@@ -38,7 +37,7 @@ export function Assessments() {
   });
 
   const pendingAssessments = households.filter((h: any) => h.programStatus === 'pending_assessment');
-  const eligibleHouseholds = households.filter((h: any) => (h.vulnerabilityScore || 0) >= 80);
+  const enrolledHouseholds = households.filter((h: any) => h.programStatus === 'enrolled');
 
   const conductAssessmentMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -68,23 +67,10 @@ export function Assessments() {
     },
   });
 
-  const handleApprove = (household: any) => {
+  const handleOpenAssessment = (household: any, decision: 'eligible' | 'ineligible') => {
     setSelectedHousehold(household);
+    setAssessmentDecision(decision);
     setAssessmentFormOpen(true);
-  };
-
-  const handleReject = (household: any) => {
-    const rawScore = 45;
-    const adjustedScore = 45;
-
-    conductAssessmentMutation.mutate({
-      householdId: household.id,
-      assessmentType: 'pmt',
-      rawScore,
-      adjustedScore,
-      decision: 'ineligible',
-      justification: 'Does not meet minimum PMT threshold for program eligibility.',
-    });
   };
 
   const handleSubmitAssessment = (e: React.FormEvent<HTMLFormElement>) => {
@@ -92,21 +78,15 @@ export function Assessments() {
     if (!selectedHousehold) return;
 
     const formData = new FormData(e.currentTarget);
-    const rawScore = parseInt(formData.get('rawScore') as string);
-    const adjustedScore = parseInt(formData.get('adjustedScore') as string);
-    const housingType = formData.get('housingType') as string;
-    const incomeSource = formData.get('incomeSource') as string;
     const notes = formData.get('notes') as string;
 
     conductAssessmentMutation.mutate({
       householdId: selectedHousehold.id,
-      assessmentType: 'pmt',
-      rawScore,
-      adjustedScore,
-      decision: adjustedScore >= 80 ? 'eligible' : 'ineligible',
-      justification: adjustedScore >= 80 ? 'Meets PMT threshold for eligibility' : 'Below PMT threshold',
-      housingType,
-      incomeSource,
+      assessmentType: 'manual',
+      rawScore: assessmentDecision === 'eligible' ? 100 : 0,
+      adjustedScore: assessmentDecision === 'eligible' ? 100 : 0,
+      decision: assessmentDecision,
+      justification: notes || (assessmentDecision === 'eligible' ? 'Approved for enrollment' : 'Does not meet eligibility criteria'),
       notes,
     });
   };
@@ -119,7 +99,7 @@ export function Assessments() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-heading font-bold text-foreground">Assessments & Eligibility</h1>
-            <p className="text-muted-foreground">Process household vulnerability scores and determine program eligibility.</p>
+            <p className="text-muted-foreground">Review households and determine program eligibility.</p>
           </div>
         </div>
 
@@ -135,22 +115,22 @@ export function Assessments() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-medium">Auto-Eligible</CardTitle>
+              <CardTitle className="text-lg font-medium">Enrolled</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-emerald-600" data-testid="text-eligible-count">{eligibleHouseholds.length}</div>
-              <p className="text-sm text-muted-foreground">Score &gt; 80 (PMT Threshold)</p>
+              <div className="text-3xl font-bold text-emerald-600" data-testid="text-enrolled-count">{enrolledHouseholds.length}</div>
+              <p className="text-sm text-muted-foreground">Approved and active</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-medium">Enrolled (YTD)</CardTitle>
+              <CardTitle className="text-lg font-medium">Ineligible</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-muted-foreground" data-testid="text-enrolled-count">
-                {households.filter((h: any) => h.programStatus === 'enrolled').length}
+              <div className="text-3xl font-bold text-muted-foreground" data-testid="text-ineligible-count">
+                {households.filter((h: any) => h.programStatus === 'ineligible').length}
               </div>
-              <p className="text-sm text-muted-foreground">Approved and active</p>
+              <p className="text-sm text-muted-foreground">Did not qualify</p>
             </CardContent>
           </Card>
         </div>
@@ -192,120 +172,19 @@ export function Assessments() {
                       </div>
                       
                       <div className="w-full lg:w-64 space-y-3">
-                        <div className="flex justify-between items-end">
-                          <span className="text-sm font-medium">PMT Score</span>
-                          <span className="text-2xl font-bold text-foreground">{hh.vulnerabilityScore || 0}/100</span>
-                        </div>
-                        <Progress value={hh.vulnerabilityScore || 0} className="h-2" />
                         <div className="flex gap-2 pt-2">
-                          <Dialog open={assessmentFormOpen && selectedHousehold?.id === hh.id} onOpenChange={(open) => {
-                            if (!open) {
-                              setAssessmentFormOpen(false);
-                              setSelectedHousehold(null);
-                            }
-                          }}>
-                            <DialogTrigger asChild>
-                              <Button 
-                                className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700"
-                                onClick={() => handleApprove(hh)}
-                                data-testid={`button-approve-${hh.id}`}
-                              >
-                                <CheckCircle2 className="h-4 w-4" /> Assess
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl">
-                              <DialogHeader>
-                                <DialogTitle>Conduct Assessment</DialogTitle>
-                                <DialogDescription>
-                                  Complete the vulnerability assessment for {hh.householdCode}
-                                </DialogDescription>
-                              </DialogHeader>
-                              <form onSubmit={handleSubmitAssessment}>
-                                <div className="space-y-4 py-4">
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                      <Label>Raw PMT Score</Label>
-                                      <Input 
-                                        name="rawScore" 
-                                        type="number" 
-                                        min="0" 
-                                        max="100" 
-                                        defaultValue="75" 
-                                        required 
-                                        data-testid="input-raw-score"
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label>Adjusted Score</Label>
-                                      <Input 
-                                        name="adjustedScore" 
-                                        type="number" 
-                                        min="0" 
-                                        max="100" 
-                                        defaultValue="82" 
-                                        required 
-                                        data-testid="input-adjusted-score"
-                                      />
-                                    </div>
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label>Housing Type</Label>
-                                    <Select name="housingType" defaultValue="semi">
-                                      <SelectTrigger data-testid="select-housing">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="permanent">Permanent (Concrete/Brick)</SelectItem>
-                                        <SelectItem value="semi">Semi-Permanent (Mud/Wood)</SelectItem>
-                                        <SelectItem value="temporary">Temporary (Makeshift)</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label>Income Source</Label>
-                                    <Select name="incomeSource" defaultValue="agriculture">
-                                      <SelectTrigger data-testid="select-income">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="agriculture">Subsistence Agriculture</SelectItem>
-                                        <SelectItem value="labor">Casual Labor</SelectItem>
-                                        <SelectItem value="trading">Small Trading</SelectItem>
-                                        <SelectItem value="none">No Income Source</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label>Assessment Notes</Label>
-                                    <Textarea 
-                                      name="notes" 
-                                      placeholder="Document any observations or special circumstances..."
-                                      data-testid="textarea-notes"
-                                    />
-                                  </div>
-                                </div>
-                                <DialogFooter>
-                                  <Button type="button" variant="outline" onClick={() => {
-                                    setAssessmentFormOpen(false);
-                                    setSelectedHousehold(null);
-                                  }}>
-                                    Cancel
-                                  </Button>
-                                  <Button 
-                                    type="submit" 
-                                    disabled={conductAssessmentMutation.isPending}
-                                    data-testid="button-submit-assessment"
-                                  >
-                                    {conductAssessmentMutation.isPending ? "Submitting..." : "Submit Assessment"}
-                                  </Button>
-                                </DialogFooter>
-                              </form>
-                            </DialogContent>
-                          </Dialog>
+                          <Button 
+                            className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => handleOpenAssessment(hh, 'eligible')}
+                            disabled={conductAssessmentMutation.isPending}
+                            data-testid={`button-approve-${hh.id}`}
+                          >
+                            <CheckCircle2 className="h-4 w-4" /> Approve
+                          </Button>
                           <Button 
                             variant="outline" 
                             className="flex-1 gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => handleReject(hh)}
+                            onClick={() => handleOpenAssessment(hh, 'ineligible')}
                             disabled={conductAssessmentMutation.isPending}
                             data-testid={`button-reject-${hh.id}`}
                           >
@@ -328,23 +207,68 @@ export function Assessments() {
           </CardContent>
         </Card>
 
-        {/* Info Card */}
-        <Card className="bg-muted/10 border-dashed">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Calculator className="h-5 w-5 text-primary" />
-              <CardTitle>Eligibility Criteria</CardTitle>
-            </div>
-            <CardDescription>Households with an adjusted PMT score of 80 or higher are automatically eligible for enrollment.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4 p-4 bg-background rounded-lg border border-border">
-              <div className="text-sm text-muted-foreground">
-                The Proxy Means Test (PMT) score is calculated based on dwelling type, income sources, household composition, and other socio-economic indicators collected during registration.
+        {/* Assessment Dialog */}
+        <Dialog open={assessmentFormOpen} onOpenChange={(open) => {
+          if (!open) {
+            setAssessmentFormOpen(false);
+            setSelectedHousehold(null);
+          }
+        }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                {assessmentDecision === 'eligible' ? 'Approve Household' : 'Reject Household'}
+              </DialogTitle>
+              <DialogDescription>
+                {assessmentDecision === 'eligible' 
+                  ? `Approve ${selectedHousehold?.householdCode} for program enrollment.`
+                  : `Reject ${selectedHousehold?.householdCode} from program enrollment.`
+                }
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmitAssessment}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Decision</Label>
+                  <Select value={assessmentDecision} onValueChange={(v: 'eligible' | 'ineligible') => setAssessmentDecision(v)}>
+                    <SelectTrigger data-testid="select-decision">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="eligible">Eligible - Approve for Enrollment</SelectItem>
+                      <SelectItem value="ineligible">Ineligible - Reject Application</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Justification / Notes</Label>
+                  <Textarea 
+                    name="notes" 
+                    placeholder="Provide a reason for this decision..."
+                    rows={4}
+                    data-testid="textarea-notes"
+                  />
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => {
+                  setAssessmentFormOpen(false);
+                  setSelectedHousehold(null);
+                }}>
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={conductAssessmentMutation.isPending}
+                  className={assessmentDecision === 'eligible' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-destructive hover:bg-destructive/90'}
+                  data-testid="button-submit-assessment"
+                >
+                  {conductAssessmentMutation.isPending ? "Submitting..." : (assessmentDecision === 'eligible' ? 'Approve' : 'Reject')}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
       </main>
     </div>

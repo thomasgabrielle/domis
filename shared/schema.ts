@@ -64,7 +64,7 @@ export const assessments = pgTable("assessments", {
   householdId: varchar("household_id").references(() => households.id, { onDelete: "cascade" }).notNull(),
   
   // Assessment details
-  assessmentType: text("assessment_type").notNull().default("pmt"),
+  assessmentType: text("assessment_type").notNull().default("manual"),
   assessmentDate: timestamp("assessment_date").defaultNow().notNull(),
   assessedBy: varchar("assessed_by").references(() => users.id),
   

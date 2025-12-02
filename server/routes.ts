@@ -86,14 +86,8 @@ export async function registerRoutes(
       
       const assessment = await storage.createAssessment(assessmentData);
       
-      // Update household vulnerability score and status
-      await storage.updateHouseholdVulnerabilityScore(
-        assessmentData.householdId,
-        assessmentData.adjustedScore
-      );
-      
-      // Auto-approve if score is above threshold (80)
-      if (assessmentData.adjustedScore >= 80 && assessmentData.decision === 'eligible') {
+      // Update household status based on decision
+      if (assessmentData.decision === 'eligible') {
         await storage.updateHouseholdStatus(assessmentData.householdId, 'enrolled');
       } else if (assessmentData.decision === 'ineligible') {
         await storage.updateHouseholdStatus(assessmentData.householdId, 'ineligible');

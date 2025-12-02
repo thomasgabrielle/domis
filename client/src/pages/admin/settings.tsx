@@ -1,10 +1,8 @@
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Navbar } from "@/components/layout/navbar";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
@@ -15,41 +13,40 @@ export function AdminSettings() {
       <AdminLayout>
         <div className="mb-6">
           <h1 className="text-2xl font-heading font-bold text-foreground">System Settings</h1>
-          <p className="text-muted-foreground">Configure core eligibility algorithms and platform preferences.</p>
+          <p className="text-muted-foreground">Configure platform preferences and system controls.</p>
         </div>
 
         <div className="grid gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Eligibility & Targeting</CardTitle>
-              <CardDescription>Parameters for the PMT (Proxy Means Test) algorithm.</CardDescription>
+              <CardTitle>Eligibility Settings</CardTitle>
+              <CardDescription>Configure eligibility determination preferences.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="auto-enroll">Automatic Enrollment Threshold</Label>
-                  <span className="font-bold text-primary">Score &gt; 85</span>
-                </div>
-                <Slider defaultValue={[85]} max={100} step={1} className="w-full" />
-                <p className="text-xs text-muted-foreground">Households with a vulnerability score above this value are automatically flagged as "Eligible".</p>
-              </div>
-              
-              <Separator />
-              
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Disability Weighted Scoring</Label>
-                  <p className="text-sm text-muted-foreground">Apply 1.5x multiplier to households with PWD members</p>
+                  <Label>Disability Priority</Label>
+                  <p className="text-sm text-muted-foreground">Prioritize households with members who have disabilities</p>
+                </div>
+                <Switch defaultChecked />
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Require Justification</Label>
+                  <p className="text-sm text-muted-foreground">Require assessors to provide notes for all decisions</p>
                 </div>
                 <Switch defaultChecked />
               </div>
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Urban/Rural Adjustment</Label>
-                  <p className="text-sm text-muted-foreground">Normalize scores based on district poverty index</p>
+                  <Label>Manager Approval Required</Label>
+                  <p className="text-sm text-muted-foreground">Require manager sign-off for rejection decisions</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch />
               </div>
             </CardContent>
           </Card>
