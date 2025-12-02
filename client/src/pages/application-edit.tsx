@@ -191,7 +191,9 @@ export function ApplicationEdit() {
           <div>
             <h1 className="text-3xl font-heading font-bold text-foreground">Edit Application</h1>
             <p className="text-muted-foreground">
-              Editing: <span className="font-mono">{householdData.householdCode}</span>
+              Application ID: <span className="font-mono">{householdData.applicationId || householdData.householdCode}</span>
+              {' '}&bull;{' '}
+              Household Code: <span className="font-mono">{householdData.householdCode}</span>
             </p>
           </div>
         </div>

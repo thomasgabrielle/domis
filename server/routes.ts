@@ -20,26 +20,60 @@ export async function registerRoutes(
   
   // Create household with members
   app.post("/api/households", async (req, res) => {
-    try {
-      const householdData = insertHouseholdSchema.parse(req.body.household);
-      const membersData = z.array(insertHouseholdMemberSchema).parse(req.body.members || []);
-      
-      // Generate household code (HH-YYYY-XXX format) and application ID (APP-YYYY-XXX format)
-      const year = new Date().getFullYear();
-      const allHouseholds = await storage.getAllHouseholds();
-      const count = allHouseholds.length + 1;
-      const householdCode = `HH-${year}-${String(count).padStart(3, '0')}`;
-      const applicationId = `APP-${year}-${String(count).padStart(3, '0')}`;
-      
-      const household = await storage.createHousehold(
-        { ...householdData, householdCode, applicationId },
-        membersData
-      );
-      
-      const fullHousehold = await storage.getHouseholdWithMembers(household.id);
-      res.json(fullHousehold);
-    } catch (error: any) {
-      res.status(400).json({ error: error.message });
+    const MAX_RETRIES = 3;
+    
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const householdData = insertHouseholdSchema.parse(req.body.household);
+        const membersData = z.array(insertHouseholdMemberSchema).parse(req.body.members || []);
+        
+        // Generate household code (HH-YYYY-XXX format) and application ID (APP-YYYY-XXX format)
+        // Use MAX-based approach to handle deletions and ensure uniqueness
+        const year = new Date().getFullYear();
+        const allHouseholds = await storage.getAllHouseholds();
+        
+        // Extract the highest number from existing codes for the current year
+        const yearPattern = new RegExp(`^HH-${year}-(\\d+)$`);
+        const appPattern = new RegExp(`^APP-${year}-(\\d+)$`);
+        
+        let maxHHNum = 0;
+        let maxAppNum = 0;
+        
+        for (const h of allHouseholds) {
+          const hhMatch = h.householdCode?.match(yearPattern);
+          if (hhMatch) {
+            maxHHNum = Math.max(maxHHNum, parseInt(hhMatch[1], 10));
+          }
+          const appMatch = h.applicationId?.match(appPattern);
+          if (appMatch) {
+            maxAppNum = Math.max(maxAppNum, parseInt(appMatch[1], 10));
+          }
+        }
+        
+        // Add attempt offset to handle concurrent creation collisions
+        const nextNum = Math.max(maxHHNum, maxAppNum) + 1 + attempt;
+        const householdCode = `HH-${year}-${String(nextNum).padStart(3, '0')}`;
+        const applicationId = `APP-${year}-${String(nextNum).padStart(3, '0')}`;
+        
+        const household = await storage.createHousehold(
+          { ...householdData, householdCode, applicationId },
+          membersData
+        );
+        
+        const fullHousehold = await storage.getHouseholdWithMembers(household.id);
+        return res.json(fullHousehold);
+      } catch (error: any) {
+        // Check if this is a unique constraint violation (retry)
+        const isUniqueViolation = error.message?.includes('unique') || 
+                                   error.message?.includes('duplicate') ||
+                                   error.code === '23505';
+        
+        if (isUniqueViolation && attempt < MAX_RETRIES - 1) {
+          continue; // Retry with incremented attempt offset
+        }
+        
+        return res.status(400).json({ error: error.message });
+      }
     }
   });
 
