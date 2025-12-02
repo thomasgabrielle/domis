@@ -1,43 +1,105 @@
-import { Link } from "wouter";
-import { ShieldCheck } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Building2, Users, ClipboardCheck, AlertCircle, Briefcase, CreditCard, BarChart3, Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 export function Navbar() {
+  const [location] = useLocation();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const navItems = [
+    { href: "/", label: "Dashboard", icon: Building2 },
+    { href: "/registration", label: "Registration", icon: Users },
+    { href: "/assessments", label: "Assessments", icon: ClipboardCheck },
+    { href: "/cases", label: "Case Mgmt", icon: Briefcase },
+    { href: "/payments", label: "Payments", icon: CreditCard },
+    { href: "/grievances", label: "Grievances", icon: AlertCircle },
+    { href: "/reports", label: "M&E", icon: BarChart3 },
+  ];
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/">
           <a className="flex items-center gap-2 group">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground shadow-lg group-hover:scale-105 transition-transform">
-              <ShieldCheck className="h-5 w-5" />
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground shadow-lg">
+              <Building2 className="h-5 w-5" />
             </div>
-            <span className="font-heading font-bold text-xl text-foreground tracking-tight">
-              Estately
-            </span>
+            <div className="flex flex-col">
+              <span className="font-heading font-bold text-lg text-foreground leading-none">
+                PAP-MIS
+              </span>
+              <span className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
+                Public Assistance Program
+              </span>
+            </div>
           </a>
         </Link>
         
-        <nav className="flex items-center gap-6">
-          <Link href="/">
-            <a className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Dashboard
-            </a>
-          </Link>
-          <Link href="/beneficiaries">
-            <a className="text-sm font-medium text-foreground transition-colors">
-              Beneficiaries
-            </a>
-          </Link>
-           <Link href="/settings">
-            <a className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Settings
-            </a>
-          </Link>
+        {/* Desktop Nav */}
+        <nav className="hidden md:flex items-center gap-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location === item.href;
+            return (
+              <Link key={item.href} href={item.href}>
+                <a className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                  isActive 
+                    ? "bg-primary/10 text-primary" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/5"
+                )}>
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </a>
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="flex items-center gap-4">
-          <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-secondary-foreground">
-            JD
+          <div className="hidden md:flex flex-col items-end mr-2">
+            <span className="text-sm font-medium">Admin User</span>
+            <span className="text-xs text-muted-foreground">Ministry of Social Affairs</span>
           </div>
+          <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+            AU
+          </div>
+          
+          {/* Mobile Menu */}
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild className="md:hidden">
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[250px] sm:w-[300px]">
+              <div className="flex flex-col gap-6 mt-6">
+                 {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location === item.href;
+                  return (
+                    <Link key={item.href} href={item.href}>
+                      <a 
+                        onClick={() => setIsOpen(false)}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium transition-colors",
+                          isActive 
+                            ? "bg-primary/10 text-primary" 
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="h-5 w-5" />
+                        {item.label}
+                      </a>
+                    </Link>
+                  );
+                })}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </header>
