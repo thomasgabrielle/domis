@@ -32,6 +32,13 @@ type MemberForm = {
   relationshipToHead: string;
   nationalId: string;
   disabilityStatus: boolean;
+  maritalStatus: string;
+  educationLevel: string;
+  professionalCertifications: string;
+  currentEducationEnrolment: string;
+  ongoingCertification: string;
+  professionalSituation: string;
+  employerDetails: string;
 };
 
 type HouseholdForm = {
@@ -54,6 +61,13 @@ type DuplicateMember = {
   relationshipToHead: string;
   disabilityStatus: boolean;
   isHead: boolean;
+  maritalStatus?: string | null;
+  educationLevel?: string | null;
+  professionalCertifications?: string | null;
+  currentEducationEnrolment?: string | null;
+  ongoingCertification?: string | null;
+  professionalSituation?: string | null;
+  employerDetails?: string | null;
 };
 
 type DuplicateResult = {
@@ -90,6 +104,13 @@ export function Registration() {
       relationshipToHead: "head",
       nationalId: "",
       disabilityStatus: false,
+      maritalStatus: "",
+      educationLevel: "",
+      professionalCertifications: "",
+      currentEducationEnrolment: "",
+      ongoingCertification: "",
+      professionalSituation: "",
+      employerDetails: "",
     }
   ]);
   
@@ -186,6 +207,13 @@ export function Registration() {
       nationalId: formData.get(`nationalId-${index}`) as string || null,
       disabilityStatus: formData.get(`disability-${index}`) === "on",
       isHead: index === 0,
+      maritalStatus: member.maritalStatus || null,
+      educationLevel: member.educationLevel || null,
+      professionalCertifications: member.professionalCertifications || null,
+      currentEducationEnrolment: member.currentEducationEnrolment || null,
+      ongoingCertification: member.ongoingCertification || null,
+      professionalSituation: member.professionalSituation || null,
+      employerDetails: member.employerDetails || null,
     }));
 
     createHouseholdMutation.mutate({
@@ -203,6 +231,13 @@ export function Registration() {
       relationshipToHead: "",
       nationalId: "",
       disabilityStatus: false,
+      maritalStatus: "",
+      educationLevel: "",
+      professionalCertifications: "",
+      currentEducationEnrolment: "",
+      ongoingCertification: "",
+      professionalSituation: "",
+      employerDetails: "",
     }]);
   };
 
@@ -276,6 +311,13 @@ export function Registration() {
         relationshipToHead: m.isHead ? "head" : (m.relationshipToHead || ""),
         nationalId: m.nationalId || "",
         disabilityStatus: m.disabilityStatus || false,
+        maritalStatus: m.maritalStatus || "",
+        educationLevel: m.educationLevel || "",
+        professionalCertifications: m.professionalCertifications || "",
+        currentEducationEnrolment: m.currentEducationEnrolment || "",
+        ongoingCertification: m.ongoingCertification || "",
+        professionalSituation: m.professionalSituation || "",
+        employerDetails: m.employerDetails || "",
       }));
       
       setMembers(newMembers);
@@ -297,6 +339,13 @@ export function Registration() {
         gender: member.gender || "",
         nationalId: member.nationalId || "",
         disabilityStatus: member.disabilityStatus || false,
+        maritalStatus: member.maritalStatus || "",
+        educationLevel: member.educationLevel || "",
+        professionalCertifications: member.professionalCertifications || "",
+        currentEducationEnrolment: member.currentEducationEnrolment || "",
+        ongoingCertification: member.ongoingCertification || "",
+        professionalSituation: member.professionalSituation || "",
+        employerDetails: member.employerDetails || "",
       };
       setMembers(newMembers);
       setDuplicateBlocked(prev => ({ ...prev, [memberIndex]: false }));
@@ -888,6 +937,223 @@ export function Registration() {
                         <p className="text-xs text-muted-foreground mt-1">Upload medical certificate or official documentation</p>
                       </div>
                     )}
+                    
+                    <Separator className="my-6" />
+                    
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-muted-foreground">Education & Employment Information</h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor={`maritalStatus-${index}`}>Marital Status</Label>
+                          <Select
+                            value={member.maritalStatus}
+                            onValueChange={(value) => {
+                              const newMembers = [...members];
+                              newMembers[index].maritalStatus = value;
+                              setMembers(newMembers);
+                            }}
+                          >
+                            <SelectTrigger id={`maritalStatus-${index}`} data-testid={`select-marital-status-${index}`}>
+                              <SelectValue placeholder="Select marital status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="married">Married</SelectItem>
+                              <SelectItem value="cohabitating">Cohabitating (with companion)</SelectItem>
+                              <SelectItem value="single">Single</SelectItem>
+                              <SelectItem value="widow_widower">Widow/Widower</SelectItem>
+                              <SelectItem value="separated">Separated</SelectItem>
+                              <SelectItem value="child_under_18">Child (under 18)</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor={`educationLevel-${index}`}>Completed Education Level</Label>
+                          <Select
+                            value={member.educationLevel}
+                            onValueChange={(value) => {
+                              const newMembers = [...members];
+                              newMembers[index].educationLevel = value;
+                              setMembers(newMembers);
+                            }}
+                          >
+                            <SelectTrigger id={`educationLevel-${index}`} data-testid={`select-education-level-${index}`}>
+                              <SelectValue placeholder="Select education level" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="no_education">No education</SelectItem>
+                              <SelectItem value="primary">Primary</SelectItem>
+                              <SelectItem value="secondary">Secondary</SelectItem>
+                              <SelectItem value="hs_grad_ged">HS Grad/ GED/ Alternative program</SelectItem>
+                              <SelectItem value="college_associates">College: Associate's</SelectItem>
+                              <SelectItem value="college_bachelors">College: Bachelor's</SelectItem>
+                              <SelectItem value="college_masters">College: Masters</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor={`currentEducationEnrolment-${index}`}>Current Education Enrolment</Label>
+                          <Select
+                            value={member.currentEducationEnrolment}
+                            onValueChange={(value) => {
+                              const newMembers = [...members];
+                              newMembers[index].currentEducationEnrolment = value;
+                              setMembers(newMembers);
+                            }}
+                          >
+                            <SelectTrigger id={`currentEducationEnrolment-${index}`} data-testid={`select-current-education-${index}`}>
+                              <SelectValue placeholder="Select enrolment status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="under_5_not_formal">Under 5 - not in formal child-care</SelectItem>
+                              <SelectItem value="attending_childcare">Attending child-care</SelectItem>
+                              <SelectItem value="attending_school">Attending school</SelectItem>
+                              <SelectItem value="not_attending_school_age">Not attending school despite being school age</SelectItem>
+                              <SelectItem value="attending_college">Attending college - Attending professional certification</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor={`professionalCertifications-${index}`}>Professional Certifications Completed</Label>
+                          <Select
+                            value={member.professionalCertifications}
+                            onValueChange={(value) => {
+                              const newMembers = [...members];
+                              newMembers[index].professionalCertifications = value;
+                              setMembers(newMembers);
+                            }}
+                          >
+                            <SelectTrigger id={`professionalCertifications-${index}`} data-testid={`select-prof-certs-${index}`}>
+                              <SelectValue placeholder="Select certification" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="no_certification">No prof. certification</SelectItem>
+                              <SelectItem value="accommodations">Accommodations (Hotels, Villas, Guest Houses etc.)</SelectItem>
+                              <SelectItem value="automotive">Automotive (Sales, repairs)</SelectItem>
+                              <SelectItem value="construction">Construction</SelectItem>
+                              <SelectItem value="education">Education (Early childhood, daycare, Teacher)</SelectItem>
+                              <SelectItem value="utilities">Utilities (Electricity and Water)</SelectItem>
+                              <SelectItem value="financial_insurance">Financial and Insurance Activities</SelectItem>
+                              <SelectItem value="fisheries_agriculture">Fisheries and Agriculture</SelectItem>
+                              <SelectItem value="food_services">Food Services (Restaurants, Eateries, Bars etc.)</SelectItem>
+                              <SelectItem value="health_social_work">Human Health and Social Work</SelectItem>
+                              <SelectItem value="information_communication">Information and Communication</SelectItem>
+                              <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                              <SelectItem value="marine">Marine (Charter Yachts, Charter Boats, Ferry etc.)</SelectItem>
+                              <SelectItem value="mining_quarrying">Mining and Quarrying</SelectItem>
+                              <SelectItem value="personal_care">Personal Care (Barbershops, Hair Salons, Nail Technicians, Spas)</SelectItem>
+                              <SelectItem value="professional_admin">Professional and Administrative Services</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor={`ongoingCertification-${index}`}>Ongoing Professional Certification</Label>
+                          <Select
+                            value={member.ongoingCertification}
+                            onValueChange={(value) => {
+                              const newMembers = [...members];
+                              newMembers[index].ongoingCertification = value;
+                              setMembers(newMembers);
+                            }}
+                          >
+                            <SelectTrigger id={`ongoingCertification-${index}`} data-testid={`select-ongoing-cert-${index}`}>
+                              <SelectValue placeholder="Select ongoing certification" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="no_certification">No prof. certification</SelectItem>
+                              <SelectItem value="accommodations">Accommodations (Hotels, Villas, Guest Houses etc.)</SelectItem>
+                              <SelectItem value="automotive">Automotive (Sales, repairs)</SelectItem>
+                              <SelectItem value="construction">Construction</SelectItem>
+                              <SelectItem value="education">Education (Early childhood, daycare, Teacher)</SelectItem>
+                              <SelectItem value="utilities">Utilities (Electricity and Water)</SelectItem>
+                              <SelectItem value="financial_insurance">Financial and Insurance Activities</SelectItem>
+                              <SelectItem value="fisheries_agriculture">Fisheries and Agriculture</SelectItem>
+                              <SelectItem value="food_services">Food Services (Restaurants, Eateries, Bars etc.)</SelectItem>
+                              <SelectItem value="health_social_work">Human Health and Social Work</SelectItem>
+                              <SelectItem value="information_communication">Information and Communication</SelectItem>
+                              <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                              <SelectItem value="marine">Marine (Charter Yachts, Charter Boats, Ferry etc.)</SelectItem>
+                              <SelectItem value="mining_quarrying">Mining and Quarrying</SelectItem>
+                              <SelectItem value="personal_care">Personal Care (Barbershops, Hair Salons, Nail Technicians, Spas)</SelectItem>
+                              <SelectItem value="professional_admin">Professional and Administrative Services</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor={`professionalSituation-${index}`}>Professional Situation</Label>
+                          <Select
+                            value={member.professionalSituation}
+                            onValueChange={(value) => {
+                              const newMembers = [...members];
+                              newMembers[index].professionalSituation = value;
+                              setMembers(newMembers);
+                            }}
+                          >
+                            <SelectTrigger id={`professionalSituation-${index}`} data-testid={`select-prof-situation-${index}`}>
+                              <SelectValue placeholder="Select professional situation" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="working_full_time">Working FULL time (35 hours or more per week)</SelectItem>
+                              <SelectItem value="working_part_time">Working PART time (less than 35 hours per week)</SelectItem>
+                              <SelectItem value="self_employed">Self employed</SelectItem>
+                              <SelectItem value="informal_worker">Informal Worker (casual jobs/jobs of limited duration)</SelectItem>
+                              <SelectItem value="unemployed">Unemployed (despite being of working age)</SelectItem>
+                              <SelectItem value="retired_age_pension">Retired (receiving ONLY an Age Pension benefit from Social Security)</SelectItem>
+                              <SelectItem value="retired_pension_employment">Retired with pension (pension ONLY payable from employment, 401k)</SelectItem>
+                              <SelectItem value="retired_pension_both">Retired with pension (receiving pension from BOTH employment, 401k and Social Security)</SelectItem>
+                              <SelectItem value="retired_no_pension">Retired without pension</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor={`employerDetails-${index}`}>Employer's Name, Employment History and Details</Label>
+                        <Select
+                          value={member.employerDetails}
+                          onValueChange={(value) => {
+                            const newMembers = [...members];
+                            newMembers[index].employerDetails = value;
+                            setMembers(newMembers);
+                          }}
+                        >
+                          <SelectTrigger id={`employerDetails-${index}`} data-testid={`select-employer-details-${index}`}>
+                            <SelectValue placeholder="Select industry/sector" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="accommodations">Accommodations (Hotels, Villas, Guest Houses etc.)</SelectItem>
+                            <SelectItem value="automotive">Automotive (Sales, repairs)</SelectItem>
+                            <SelectItem value="construction">Construction</SelectItem>
+                            <SelectItem value="education">Education (Early childhood, daycare, Teacher)</SelectItem>
+                            <SelectItem value="utilities">Utilities (Electricity and Water)</SelectItem>
+                            <SelectItem value="financial_insurance">Financial and Insurance Activities</SelectItem>
+                            <SelectItem value="fisheries_agriculture">Fisheries and Agriculture</SelectItem>
+                            <SelectItem value="food_services">Food Services (Restaurants, Eateries, Bars etc.)</SelectItem>
+                            <SelectItem value="health_social_work">Human Health and Social Work</SelectItem>
+                            <SelectItem value="information_communication">Information and Communication</SelectItem>
+                            <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                            <SelectItem value="marine">Marine (Charter Yachts, Charter Boats, Ferry etc.)</SelectItem>
+                            <SelectItem value="mining_quarrying">Mining and Quarrying</SelectItem>
+                            <SelectItem value="personal_care">Personal Care (Barbershops, Hair Salons, Nail Technicians, Spas)</SelectItem>
+                            <SelectItem value="professional_admin">Professional and Administrative Services</SelectItem>
+                            <SelectItem value="public_admin">Public Administration, Defence and Social Security (Government, RVIPF, Statutory Bodies)</SelectItem>
+                            <SelectItem value="real_estate">Real Estate</SelectItem>
+                            <SelectItem value="retail_grocery">Retail: Groceries, Mini Marts, Supermarkets</SelectItem>
+                            <SelectItem value="retail_non_grocery">Retail: Non-Grocery (Clothing, Electronics)</SelectItem>
+                            <SelectItem value="transportation_storage">Transportation & Storage (Heavy Equipment, General Truck Services etc.)</SelectItem>
+                            <SelectItem value="transportation_passenger">Transportation (Taxi, School Bus etc.)</SelectItem>
+                            <SelectItem value="wholesale">Wholesale</SelectItem>
+                            <SelectItem value="other">Other (Please specify)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </CardContent>
