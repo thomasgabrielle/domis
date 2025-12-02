@@ -111,7 +111,7 @@ export function AdminForms() {
                     <span className="text-xs font-medium text-primary uppercase">Date Picker</span>
                   </div>
                   <div className="font-medium">Date of Birth</div>
-                  <div className="text-sm text-muted-foreground">Variable: `dob` • Validation: `age > 18`</div>
+                  <div className="text-sm text-muted-foreground">Variable: `dob` • Validation: `age &gt; 18`</div>
                 </div>
                 <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 text-destructive"><Trash2 className="h-4 w-4" /></Button>
               </div>

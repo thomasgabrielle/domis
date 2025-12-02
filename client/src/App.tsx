@@ -8,6 +8,9 @@ import { Dashboard } from "@/pages/dashboard";
 import { Registration } from "@/pages/registration";
 import { Grievances } from "@/pages/grievances";
 import { Payments } from "@/pages/payments";
+import { Assessments } from "@/pages/assessments";
+import { CaseManagement } from "@/pages/cases";
+import { Reports } from "@/pages/reports";
 import { AdminUsers } from "@/pages/admin/users";
 import { AdminPrograms } from "@/pages/admin/programs";
 import { AdminSettings } from "@/pages/admin/settings";
@@ -22,6 +25,9 @@ function Router() {
       <Route path="/registration" component={Registration} />
       <Route path="/grievances" component={Grievances} />
       <Route path="/payments" component={Payments} />
+      <Route path="/assessments" component={Assessments} />
+      <Route path="/cases" component={CaseManagement} />
+      <Route path="/reports" component={Reports} />
       
       {/* Admin Routes */}
       <Route path="/admin/users" component={AdminUsers} />
@@ -31,8 +37,6 @@ function Router() {
       <Route path="/admin/bi-tools" component={AdminBITools} />
       <Route path="/admin/interop" component={AdminInterop} />
 
-      <Route path="/cases" component={() => <div className="p-8 text-center text-muted-foreground">Case Management Module - Under Construction</div>} />
-      <Route path="/reports" component={() => <div className="p-8 text-center text-muted-foreground">M&E Reports Module - Under Construction</div>} />
       <Route component={NotFound} />
     </Switch>
   );
