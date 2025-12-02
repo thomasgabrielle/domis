@@ -77,6 +77,20 @@ export async function registerRoutes(
     }
   });
 
+  // Update household with members
+  app.put("/api/households/:id", async (req, res) => {
+    try {
+      const householdId = req.params.id;
+      const householdData = req.body.household;
+      const membersData = req.body.members || [];
+      
+      const updatedHousehold = await storage.updateHousehold(householdId, householdData, membersData);
+      res.json(updatedHousehold);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // ===== ASSESSMENTS =====
   
   // Create assessment

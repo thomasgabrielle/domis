@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 
@@ -179,6 +179,15 @@ export function ApplicationDetail() {
                 Application Details
               </h1>
               {getStatusBadge(household.programStatus)}
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="gap-2 cursor-pointer"
+                onClick={() => setLocation(`/application/${householdId}/edit`)}
+                data-testid="button-edit"
+              >
+                <Pencil className="h-4 w-4" /> Edit
+              </Button>
             </div>
             <p className="text-muted-foreground">
               Household Code: <span className="font-mono">{household.householdCode}</span>

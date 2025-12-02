@@ -34,6 +34,7 @@ export interface IStorage {
   getAllHouseholds(): Promise<Household[]>;
   updateHouseholdStatus(id: string, status: string): Promise<void>;
   updateHouseholdVulnerabilityScore(id: string, score: number): Promise<void>;
+  updateHousehold(id: string, householdData: Partial<InsertHousehold>, membersData: any[]): Promise<{ household: Household; members: HouseholdMember[] }>;
   
   // Household Members
   getHouseholdMembers(householdId: string): Promise<HouseholdMember[]>;
@@ -136,6 +137,47 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .where(eq(households.id, id));
+  }
+
+  async updateHousehold(id: string, householdData: Partial<InsertHousehold>, membersData: any[]): Promise<{ household: Household; members: HouseholdMember[] }> {
+    await db.update(households)
+      .set({
+        ...householdData,
+        updatedAt: new Date()
+      })
+      .where(eq(households.id, id));
+
+    for (const member of membersData) {
+      if (member.id) {
+        await db.update(householdMembers)
+          .set({
+            firstName: member.firstName,
+            lastName: member.lastName,
+            dateOfBirth: member.dateOfBirth,
+            gender: member.gender,
+            relationshipToHead: member.relationshipToHead,
+            nationalId: member.nationalId,
+            disabilityStatus: member.disabilityStatus,
+            isHead: member.isHead,
+          })
+          .where(eq(householdMembers.id, member.id));
+      } else {
+        await db.insert(householdMembers).values({
+          householdId: id,
+          firstName: member.firstName,
+          lastName: member.lastName,
+          dateOfBirth: member.dateOfBirth,
+          gender: member.gender,
+          relationshipToHead: member.relationshipToHead,
+          nationalId: member.nationalId,
+          disabilityStatus: member.disabilityStatus,
+          isHead: member.isHead,
+        });
+      }
+    }
+
+    const result = await this.getHouseholdWithMembers(id);
+    return result!;
   }
 
   // Household Members

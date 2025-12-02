@@ -13,6 +13,7 @@ import { CaseManagement } from "@/pages/cases";
 import { Reports } from "@/pages/reports";
 import { Worksheet } from "@/pages/worksheet";
 import { ApplicationDetail } from "@/pages/application-detail";
+import { ApplicationEdit } from "@/pages/application-edit";
 import { AdminUsers } from "@/pages/admin/users";
 import { AdminPrograms } from "@/pages/admin/programs";
 import { AdminSettings } from "@/pages/admin/settings";
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/reports" component={Reports} />
       <Route path="/worksheet" component={Worksheet} />
       <Route path="/application/:id" component={ApplicationDetail} />
+      <Route path="/application/:id/edit" component={ApplicationEdit} />
       
       {/* Admin Routes */}
       <Route path="/admin/users" component={AdminUsers} />
