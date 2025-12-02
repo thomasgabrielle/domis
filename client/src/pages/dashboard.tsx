@@ -75,7 +75,7 @@ export function Dashboard() {
           <div className="flex gap-2">
             <Link href="/registration">
               <Button className="gap-2 shadow-md" data-testid="button-register-household">
-                <Users className="h-4 w-4" /> Register Household
+                <Users className="h-4 w-4" /> New Intake
               </Button>
             </Link>
             <Link href="/reports">

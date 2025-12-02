@@ -66,8 +66,8 @@ export function Registration() {
     },
     onSuccess: () => {
       toast({
-        title: "Registration Successful",
-        description: "Household has been registered and queued for assessment.",
+        title: "Intake Successful",
+        description: "Household has been added and queued for assessment.",
       });
       setTimeout(() => setLocation("/"), 1500);
     },
@@ -135,7 +135,7 @@ export function Registration() {
       
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-heading font-bold text-foreground">Household Registration</h1>
+          <h1 className="text-3xl font-heading font-bold text-foreground">Household Intake</h1>
           <p className="text-muted-foreground">Create a new household profile for the Public Assistance Program.</p>
         </div>
 
@@ -309,7 +309,7 @@ export function Registration() {
                   disabled={createHouseholdMutation.isPending}
                   data-testid="button-submit"
                 >
-                  {createHouseholdMutation.isPending ? "Registering..." : "Register Household"}
+                  {createHouseholdMutation.isPending ? "Submitting..." : "Submit Intake"}
                 </Button>
               </CardFooter>
             </Card>

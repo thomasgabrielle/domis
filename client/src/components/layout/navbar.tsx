@@ -11,12 +11,12 @@ export function Navbar() {
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: Building2 },
-    { href: "/registration", label: "Registration", icon: Users },
+    { href: "/registration", label: "Intake", icon: Users },
     { href: "/assessments", label: "Assessments", icon: ClipboardCheck },
     { href: "/cases", label: "Case Mgmt", icon: Briefcase },
     { href: "/payments", label: "Payments", icon: CreditCard },
     { href: "/grievances", label: "Grievances", icon: AlertCircle },
-    { href: "/worksheet", label: "Worksheet", icon: FileSpreadsheet },
+    { href: "/worksheet", label: "Registry", icon: FileSpreadsheet },
     { href: "/reports", label: "M&E", icon: BarChart3 },
   ];
 

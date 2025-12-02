@@ -127,7 +127,7 @@ export function Worksheet() {
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-heading font-bold text-foreground">Applicants Worksheet</h1>
+            <h1 className="text-3xl font-heading font-bold text-foreground">Applicant Registry</h1>
             <p className="text-muted-foreground">Complete list of all registered applicants across households.</p>
           </div>
           <Button variant="outline" className="gap-2" data-testid="button-export">
