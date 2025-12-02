@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +22,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Plus, Trash2, MapPin, User, FileText, Upload, Calendar, UserCheck, Loader2 } from "lucide-react";
+import { Plus, Trash2, MapPin, User, FileText, Upload, Calendar, UserCheck, Loader2, ChevronsUpDown, X } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 
@@ -34,12 +36,31 @@ type MemberForm = {
   disabilityStatus: boolean;
   maritalStatus: string;
   educationLevel: string;
-  professionalCertifications: string;
+  professionalCertifications: string[];
   currentEducationEnrolment: string;
   ongoingCertification: string;
   professionalSituation: string;
   employerDetails: string;
 };
+
+const CERTIFICATION_OPTIONS = [
+  { value: "no_certification", label: "No prof. certification" },
+  { value: "accommodations", label: "Accommodations (Hotels, Villas, Guest Houses etc.)" },
+  { value: "automotive", label: "Automotive (Sales, repairs)" },
+  { value: "construction", label: "Construction" },
+  { value: "education", label: "Education (Early childhood, daycare, Teacher)" },
+  { value: "utilities", label: "Utilities (Electricity and Water)" },
+  { value: "financial_insurance", label: "Financial and Insurance Activities" },
+  { value: "fisheries_agriculture", label: "Fisheries and Agriculture" },
+  { value: "food_services", label: "Food Services (Restaurants, Eateries, Bars etc.)" },
+  { value: "health_social_work", label: "Human Health and Social Work" },
+  { value: "information_communication", label: "Information and Communication" },
+  { value: "manufacturing", label: "Manufacturing" },
+  { value: "marine", label: "Marine (Charter Yachts, Charter Boats, Ferry etc.)" },
+  { value: "mining_quarrying", label: "Mining and Quarrying" },
+  { value: "personal_care", label: "Personal Care (Barbershops, Hair Salons, Nail Technicians, Spas)" },
+  { value: "professional_admin", label: "Professional and Administrative Services" },
+];
 
 type HouseholdForm = {
   province: string;
@@ -106,7 +127,7 @@ export function Registration() {
       disabilityStatus: false,
       maritalStatus: "",
       educationLevel: "",
-      professionalCertifications: "",
+      professionalCertifications: [],
       currentEducationEnrolment: "",
       ongoingCertification: "",
       professionalSituation: "",
@@ -209,7 +230,7 @@ export function Registration() {
       isHead: index === 0,
       maritalStatus: member.maritalStatus || null,
       educationLevel: member.educationLevel || null,
-      professionalCertifications: member.professionalCertifications || null,
+      professionalCertifications: member.professionalCertifications.length > 0 ? member.professionalCertifications.join(",") : null,
       currentEducationEnrolment: member.currentEducationEnrolment || null,
       ongoingCertification: member.ongoingCertification || null,
       professionalSituation: member.professionalSituation || null,
@@ -233,7 +254,7 @@ export function Registration() {
       disabilityStatus: false,
       maritalStatus: "",
       educationLevel: "",
-      professionalCertifications: "",
+      professionalCertifications: [],
       currentEducationEnrolment: "",
       ongoingCertification: "",
       professionalSituation: "",
@@ -313,7 +334,7 @@ export function Registration() {
         disabilityStatus: m.disabilityStatus || false,
         maritalStatus: m.maritalStatus || "",
         educationLevel: m.educationLevel || "",
-        professionalCertifications: m.professionalCertifications || "",
+        professionalCertifications: m.professionalCertifications ? m.professionalCertifications.split(",") : [],
         currentEducationEnrolment: m.currentEducationEnrolment || "",
         ongoingCertification: m.ongoingCertification || "",
         professionalSituation: m.professionalSituation || "",
@@ -341,7 +362,7 @@ export function Registration() {
         disabilityStatus: member.disabilityStatus || false,
         maritalStatus: member.maritalStatus || "",
         educationLevel: member.educationLevel || "",
-        professionalCertifications: member.professionalCertifications || "",
+        professionalCertifications: member.professionalCertifications ? member.professionalCertifications.split(",") : [],
         currentEducationEnrolment: member.currentEducationEnrolment || "",
         ongoingCertification: member.ongoingCertification || "",
         professionalSituation: member.professionalSituation || "",
@@ -1019,36 +1040,83 @@ export function Registration() {
                         
                         <div className="space-y-2">
                           <Label htmlFor={`professionalCertifications-${index}`}>Professional Certifications Completed</Label>
-                          <Select
-                            value={member.professionalCertifications}
-                            onValueChange={(value) => {
-                              const newMembers = [...members];
-                              newMembers[index].professionalCertifications = value;
-                              setMembers(newMembers);
-                            }}
-                          >
-                            <SelectTrigger id={`professionalCertifications-${index}`} data-testid={`select-prof-certs-${index}`}>
-                              <SelectValue placeholder="Select certification" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="no_certification">No prof. certification</SelectItem>
-                              <SelectItem value="accommodations">Accommodations (Hotels, Villas, Guest Houses etc.)</SelectItem>
-                              <SelectItem value="automotive">Automotive (Sales, repairs)</SelectItem>
-                              <SelectItem value="construction">Construction</SelectItem>
-                              <SelectItem value="education">Education (Early childhood, daycare, Teacher)</SelectItem>
-                              <SelectItem value="utilities">Utilities (Electricity and Water)</SelectItem>
-                              <SelectItem value="financial_insurance">Financial and Insurance Activities</SelectItem>
-                              <SelectItem value="fisheries_agriculture">Fisheries and Agriculture</SelectItem>
-                              <SelectItem value="food_services">Food Services (Restaurants, Eateries, Bars etc.)</SelectItem>
-                              <SelectItem value="health_social_work">Human Health and Social Work</SelectItem>
-                              <SelectItem value="information_communication">Information and Communication</SelectItem>
-                              <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                              <SelectItem value="marine">Marine (Charter Yachts, Charter Boats, Ferry etc.)</SelectItem>
-                              <SelectItem value="mining_quarrying">Mining and Quarrying</SelectItem>
-                              <SelectItem value="personal_care">Personal Care (Barbershops, Hair Salons, Nail Technicians, Spas)</SelectItem>
-                              <SelectItem value="professional_admin">Professional and Administrative Services</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className="w-full justify-between font-normal"
+                                data-testid={`select-prof-certs-${index}`}
+                              >
+                                {member.professionalCertifications.length > 0
+                                  ? `${member.professionalCertifications.length} selected`
+                                  : "Select certifications..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[400px] p-0" align="start">
+                              <ScrollArea className="h-[300px] p-4">
+                                <div className="space-y-2">
+                                  {CERTIFICATION_OPTIONS.map((option) => (
+                                    <div key={option.value} className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`cert-${index}-${option.value}`}
+                                        checked={member.professionalCertifications.includes(option.value)}
+                                        onCheckedChange={(checked) => {
+                                          const newMembers = [...members];
+                                          if (checked) {
+                                            if (option.value === "no_certification") {
+                                              newMembers[index].professionalCertifications = ["no_certification"];
+                                            } else {
+                                              const filtered = newMembers[index].professionalCertifications.filter(v => v !== "no_certification");
+                                              newMembers[index].professionalCertifications = [...filtered, option.value];
+                                            }
+                                          } else {
+                                            newMembers[index].professionalCertifications = 
+                                              newMembers[index].professionalCertifications.filter(v => v !== option.value);
+                                          }
+                                          setMembers(newMembers);
+                                        }}
+                                      />
+                                      <Label
+                                        htmlFor={`cert-${index}-${option.value}`}
+                                        className="text-sm font-normal cursor-pointer"
+                                      >
+                                        {option.label}
+                                      </Label>
+                                    </div>
+                                  ))}
+                                </div>
+                              </ScrollArea>
+                            </PopoverContent>
+                          </Popover>
+                          {member.professionalCertifications.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {member.professionalCertifications.map((certValue) => {
+                                const cert = CERTIFICATION_OPTIONS.find(o => o.value === certValue);
+                                return (
+                                  <span
+                                    key={certValue}
+                                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-muted rounded-md"
+                                  >
+                                    {cert?.label || certValue}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const newMembers = [...members];
+                                        newMembers[index].professionalCertifications = 
+                                          newMembers[index].professionalCertifications.filter(v => v !== certValue);
+                                        setMembers(newMembers);
+                                      }}
+                                      className="hover:text-destructive"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                         
                         <div className="space-y-2">
