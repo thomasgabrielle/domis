@@ -465,13 +465,13 @@ export function Registration() {
                  <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <User className="h-5 w-5 text-primary" />
-                    <CardTitle>Household Roster</CardTitle>
+                    <CardTitle>Applicant Information</CardTitle>
                   </div>
                   <Button type="button" onClick={addMember} variant="outline" size="sm" className="gap-2" data-testid="button-add-member">
                     <Plus className="h-4 w-4" /> Add Member
                   </Button>
                 </div>
-                <CardDescription>Enter details for Head of Household and all dependents.</CardDescription>
+                <CardDescription>Enter details for the applicant and all household members.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {members.map((member, index) => (
