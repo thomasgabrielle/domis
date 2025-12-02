@@ -11,6 +11,7 @@ import { Payments } from "@/pages/payments";
 import { Assessments } from "@/pages/assessments";
 import { CaseManagement } from "@/pages/cases";
 import { Reports } from "@/pages/reports";
+import { Worksheet } from "@/pages/worksheet";
 import { AdminUsers } from "@/pages/admin/users";
 import { AdminPrograms } from "@/pages/admin/programs";
 import { AdminSettings } from "@/pages/admin/settings";
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/assessments" component={Assessments} />
       <Route path="/cases" component={CaseManagement} />
       <Route path="/reports" component={Reports} />
+      <Route path="/worksheet" component={Worksheet} />
       
       {/* Admin Routes */}
       <Route path="/admin/users" component={AdminUsers} />
