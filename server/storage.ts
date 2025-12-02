@@ -140,31 +140,63 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateHousehold(id: string, householdData: Partial<InsertHousehold>, membersData: any[]): Promise<{ household: Household; members: HouseholdMember[] }> {
-    const cleanedHouseholdData = { ...householdData };
-    if (cleanedHouseholdData.intakeDate && typeof cleanedHouseholdData.intakeDate === 'string') {
-      cleanedHouseholdData.intakeDate = new Date(cleanedHouseholdData.intakeDate);
+    const updateData: Record<string, any> = {
+      updatedAt: new Date()
+    };
+    
+    if (householdData.province !== undefined) updateData.province = householdData.province;
+    if (householdData.district !== undefined) updateData.district = householdData.district;
+    if (householdData.village !== undefined) updateData.village = householdData.village;
+    if (householdData.gpsCoordinates !== undefined) updateData.gpsCoordinates = householdData.gpsCoordinates || null;
+    if (householdData.outreachType !== undefined) updateData.outreachType = householdData.outreachType || null;
+    if (householdData.outreachMethod !== undefined) updateData.outreachMethod = householdData.outreachMethod || null;
+    if (householdData.isOnOwnBehalf !== undefined) updateData.isOnOwnBehalf = householdData.isOnOwnBehalf;
+    if (householdData.requestPurpose !== undefined) updateData.requestPurpose = householdData.requestPurpose || null;
+    if (householdData.actionTaken !== undefined) updateData.actionTaken = householdData.actionTaken || null;
+    if (householdData.followUpNotes !== undefined) updateData.followUpNotes = householdData.followUpNotes || null;
+    
+    if (householdData.proxyFirstName !== undefined) updateData.proxyFirstName = householdData.proxyFirstName || null;
+    if (householdData.proxyLastName !== undefined) updateData.proxyLastName = householdData.proxyLastName || null;
+    if (householdData.proxyAlias !== undefined) updateData.proxyAlias = householdData.proxyAlias || null;
+    if (householdData.proxyGender !== undefined) updateData.proxyGender = householdData.proxyGender || null;
+    if (householdData.proxyAddress !== undefined) updateData.proxyAddress = householdData.proxyAddress || null;
+    if (householdData.proxyPhone !== undefined) updateData.proxyPhone = householdData.proxyPhone || null;
+    if (householdData.proxyNationalId !== undefined) updateData.proxyNationalId = householdData.proxyNationalId || null;
+    if (householdData.proxyReason !== undefined) updateData.proxyReason = householdData.proxyReason || null;
+    if (householdData.proxyRelationship !== undefined) updateData.proxyRelationship = householdData.proxyRelationship || null;
+    if (householdData.proxyRole !== undefined) updateData.proxyRole = householdData.proxyRole || null;
+    
+    if (householdData.intakeDate) {
+      updateData.intakeDate = typeof householdData.intakeDate === 'string' 
+        ? new Date(householdData.intakeDate) 
+        : householdData.intakeDate;
     }
-    if (cleanedHouseholdData.proxyDateOfBirth && typeof cleanedHouseholdData.proxyDateOfBirth === 'string') {
-      cleanedHouseholdData.proxyDateOfBirth = new Date(cleanedHouseholdData.proxyDateOfBirth);
+    if (householdData.proxyDateOfBirth) {
+      updateData.proxyDateOfBirth = typeof householdData.proxyDateOfBirth === 'string' 
+        ? new Date(householdData.proxyDateOfBirth) 
+        : householdData.proxyDateOfBirth;
+    } else if (householdData.proxyDateOfBirth === null || householdData.proxyDateOfBirth === '') {
+      updateData.proxyDateOfBirth = null;
     }
     
     await db.update(households)
-      .set({
-        ...cleanedHouseholdData,
-        updatedAt: new Date()
-      })
+      .set(updateData)
       .where(eq(households.id, id));
 
     for (const member of membersData) {
+      const memberDateOfBirth = typeof member.dateOfBirth === 'string' 
+        ? new Date(member.dateOfBirth) 
+        : member.dateOfBirth;
+        
       if (member.id) {
         await db.update(householdMembers)
           .set({
             firstName: member.firstName,
             lastName: member.lastName,
-            dateOfBirth: member.dateOfBirth,
+            dateOfBirth: memberDateOfBirth,
             gender: member.gender,
             relationshipToHead: member.relationshipToHead,
-            nationalId: member.nationalId,
+            nationalId: member.nationalId || null,
             disabilityStatus: member.disabilityStatus,
             isHead: member.isHead,
           })
@@ -174,10 +206,10 @@ export class DatabaseStorage implements IStorage {
           householdId: id,
           firstName: member.firstName,
           lastName: member.lastName,
-          dateOfBirth: member.dateOfBirth,
+          dateOfBirth: memberDateOfBirth,
           gender: member.gender,
           relationshipToHead: member.relationshipToHead,
-          nationalId: member.nationalId,
+          nationalId: member.nationalId || null,
           disabilityStatus: member.disabilityStatus,
           isHead: member.isHead,
         });
