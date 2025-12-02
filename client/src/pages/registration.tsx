@@ -548,6 +548,23 @@ export function Registration() {
                         <Label>National ID / Ref #</Label>
                         <Input name={`nationalId-${index}`} placeholder="ID Number" data-testid={`input-nationalid-${index}`} />
                       </div>
+                      <div className="space-y-2 md:col-span-3">
+                        <Label htmlFor={`nationalIdPhoto-${index}`}>Photo of National ID</Label>
+                        <div className="flex items-center gap-2">
+                          <Input 
+                            id={`nationalIdPhoto-${index}`}
+                            name={`nationalIdPhoto-${index}`}
+                            type="file" 
+                            className="flex-1"
+                            accept=".jpg,.jpeg,.png,.pdf"
+                            data-testid={`input-national-id-photo-${index}`} 
+                          />
+                          <Button type="button" variant="outline" size="icon" title="Upload ID Photo">
+                            <Upload className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Upload a photo or scan of the National ID</p>
+                      </div>
                     </div>
                     
                     <div className="mt-4 flex items-center space-x-2">
