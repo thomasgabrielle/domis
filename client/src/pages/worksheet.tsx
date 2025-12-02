@@ -23,6 +23,7 @@ type ApplicantRow = {
   status: string;
   householdId: string;
   householdCode: string;
+  applicationId: string;
 };
 
 export function Worksheet() {
@@ -70,6 +71,7 @@ export function Worksheet() {
       status: data.household.programStatus,
       householdId: data.household.id,
       householdCode: data.household.householdCode,
+      applicationId: data.household.applicationId || data.household.householdCode,
     }));
   });
 
@@ -78,7 +80,8 @@ export function Worksheet() {
     const matchesSearch = 
       applicant.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       applicant.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (applicant.nationalId && applicant.nationalId.toLowerCase().includes(searchTerm.toLowerCase()));
+      (applicant.nationalId && applicant.nationalId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      applicant.applicationId.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || applicant.status === statusFilter;
     const matchesRegion = regionFilter === "all" || applicant.region === regionFilter;
@@ -238,6 +241,7 @@ export function Worksheet() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Application ID</TableHead>
                       <TableHead>First Name</TableHead>
                       <TableHead>Last Name</TableHead>
                       <TableHead>Date of Birth</TableHead>
@@ -258,6 +262,9 @@ export function Worksheet() {
                         className="cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => setLocation(`/application/${applicant.householdId}`)}
                       >
+                        <TableCell className="font-mono text-sm" data-testid={`text-applicationid-${applicant.id}`}>
+                          {applicant.applicationId}
+                        </TableCell>
                         <TableCell className="font-medium" data-testid={`text-firstname-${applicant.id}`}>
                           {applicant.firstName}
                         </TableCell>
