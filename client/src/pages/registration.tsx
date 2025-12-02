@@ -7,10 +7,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Plus, Trash2, MapPin, User, FileText, Upload, Calendar, UserCheck } from "lucide-react";
+import { Plus, Trash2, MapPin, User, FileText, Upload, Calendar, UserCheck, Loader2 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 
@@ -34,6 +44,26 @@ type HouseholdForm = {
   notes: string;
 };
 
+type DuplicateResult = {
+  found: boolean;
+  member?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    gender: string;
+    nationalId: string;
+    disabilityStatus: boolean;
+  };
+  household?: {
+    id: string;
+    applicationId: string;
+    province: string;
+    district: string;
+    village: string;
+  };
+};
+
 export function Registration() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -49,6 +79,11 @@ export function Registration() {
       disabilityStatus: false,
     }
   ]);
+  
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [duplicateResult, setDuplicateResult] = useState<DuplicateResult | null>(null);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+  const [duplicateBlocked, setDuplicateBlocked] = useState<Record<number, boolean>>({});
 
   const createHouseholdMutation = useMutation({
     mutationFn: async (data: { household: any; members: any[] }) => {
@@ -83,6 +118,17 @@ export function Registration() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    const hasDuplicateBlocked = Object.values(duplicateBlocked).some(blocked => blocked);
+    if (hasDuplicateBlocked) {
+      toast({
+        title: "Cannot Submit",
+        description: "Please resolve duplicate National ID issues before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const formData = new FormData(e.currentTarget);
     
     const household = {
@@ -146,6 +192,86 @@ export function Registration() {
       newMembers.splice(index, 1);
       setMembers(newMembers);
     }
+  };
+
+  const checkDuplicateNationalId = async (nationalId: string, memberIndex: number) => {
+    if (!nationalId || nationalId.trim().length < 3) return;
+    
+    setCheckingDuplicate(true);
+    try {
+      const response = await fetch(`/api/registry/check-national-id/${encodeURIComponent(nationalId.trim())}`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to check for duplicates");
+      }
+      
+      const result: DuplicateResult = await response.json();
+      
+      if (result.found) {
+        setDuplicateResult({ ...result, memberIndex } as any);
+        setDuplicateDialogOpen(true);
+      } else {
+        setDuplicateBlocked(prev => ({ ...prev, [memberIndex]: false }));
+      }
+    } catch (error) {
+      console.error("Error checking duplicate:", error);
+      toast({
+        title: "Check Failed",
+        description: "Could not verify National ID. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckingDuplicate(false);
+    }
+  };
+
+  const handleDuplicateConfirm = () => {
+    if (!duplicateResult?.member) return;
+    
+    const memberIndex = (duplicateResult as any).memberIndex || 0;
+    const member = duplicateResult.member;
+    
+    const newMembers = [...members];
+    newMembers[memberIndex] = {
+      ...newMembers[memberIndex],
+      firstName: member.firstName || "",
+      lastName: member.lastName || "",
+      dateOfBirth: member.dateOfBirth ? new Date(member.dateOfBirth).toISOString().split('T')[0] : "",
+      gender: member.gender || "",
+      nationalId: member.nationalId || "",
+      disabilityStatus: member.disabilityStatus || false,
+    };
+    setMembers(newMembers);
+    
+    setDuplicateBlocked(prev => ({ ...prev, [memberIndex]: false }));
+    setDuplicateDialogOpen(false);
+    setDuplicateResult(null);
+    
+    toast({
+      title: "Client Information Loaded",
+      description: `Form pre-filled with existing client: ${member.firstName} ${member.lastName}`,
+    });
+  };
+
+  const handleDuplicateReject = () => {
+    const memberIndex = (duplicateResult as any)?.memberIndex || 0;
+    
+    const newMembers = [...members];
+    newMembers[memberIndex] = {
+      ...newMembers[memberIndex],
+      nationalId: "",
+    };
+    setMembers(newMembers);
+    
+    setDuplicateBlocked(prev => ({ ...prev, [memberIndex]: true }));
+    setDuplicateDialogOpen(false);
+    setDuplicateResult(null);
+    
+    toast({
+      title: "Duplicate ID Blocked",
+      description: "Please enter a unique National ID.",
+      variant: "destructive",
+    });
   };
 
   return (
@@ -505,19 +631,61 @@ export function Registration() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>First Name</Label>
-                        <Input name={`firstName-${index}`} placeholder="Given Name" required data-testid={`input-firstname-${index}`} />
+                        <Input 
+                          name={`firstName-${index}`} 
+                          placeholder="Given Name" 
+                          required 
+                          data-testid={`input-firstname-${index}`}
+                          value={member.firstName}
+                          onChange={(e) => {
+                            const newMembers = [...members];
+                            newMembers[index].firstName = e.target.value;
+                            setMembers(newMembers);
+                          }}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>Last Name</Label>
-                        <Input name={`lastName-${index}`} placeholder="Surname" required data-testid={`input-lastname-${index}`} />
+                        <Input 
+                          name={`lastName-${index}`} 
+                          placeholder="Surname" 
+                          required 
+                          data-testid={`input-lastname-${index}`}
+                          value={member.lastName}
+                          onChange={(e) => {
+                            const newMembers = [...members];
+                            newMembers[index].lastName = e.target.value;
+                            setMembers(newMembers);
+                          }}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>Date of Birth</Label>
-                        <Input name={`dateOfBirth-${index}`} type="date" required data-testid={`input-dob-${index}`} />
+                        <Input 
+                          name={`dateOfBirth-${index}`} 
+                          type="date" 
+                          required 
+                          data-testid={`input-dob-${index}`}
+                          value={member.dateOfBirth}
+                          onChange={(e) => {
+                            const newMembers = [...members];
+                            newMembers[index].dateOfBirth = e.target.value;
+                            setMembers(newMembers);
+                          }}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>Gender</Label>
-                        <Select name={`gender-${index}`} required>
+                        <Select 
+                          name={`gender-${index}`} 
+                          required
+                          value={member.gender}
+                          onValueChange={(value) => {
+                            const newMembers = [...members];
+                            newMembers[index].gender = value;
+                            setMembers(newMembers);
+                          }}
+                        >
                           <SelectTrigger data-testid={`select-gender-${index}`}>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
@@ -546,7 +714,32 @@ export function Registration() {
                       </div>
                       <div className="space-y-2">
                         <Label>National ID / Ref #</Label>
-                        <Input name={`nationalId-${index}`} placeholder="ID Number" data-testid={`input-nationalid-${index}`} />
+                        <div className="relative">
+                          <Input 
+                            name={`nationalId-${index}`} 
+                            placeholder="ID Number" 
+                            data-testid={`input-nationalid-${index}`}
+                            value={member.nationalId}
+                            onChange={(e) => {
+                              const newMembers = [...members];
+                              newMembers[index].nationalId = e.target.value;
+                              setMembers(newMembers);
+                              if (duplicateBlocked[index]) {
+                                setDuplicateBlocked(prev => ({ ...prev, [index]: false }));
+                              }
+                            }}
+                            onBlur={(e) => checkDuplicateNationalId(e.target.value, index)}
+                            className={duplicateBlocked[index] ? "border-destructive" : ""}
+                          />
+                          {checkingDuplicate && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        {duplicateBlocked[index] && (
+                          <p className="text-xs text-destructive">This ID is already in use. Enter a unique ID.</p>
+                        )}
                       </div>
                       <div className="space-y-2 md:col-span-3">
                         <Label htmlFor={`nationalIdPhoto-${index}`}>Photo of National ID</Label>
@@ -636,6 +829,34 @@ export function Registration() {
 
           </div>
         </form>
+
+        <AlertDialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Duplicate ID Found</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                <p>This National ID is already registered in the system.</p>
+                {duplicateResult?.member && (
+                  <div className="bg-muted p-3 rounded-md mt-2">
+                    <p className="font-medium">{duplicateResult.member.firstName} {duplicateResult.member.lastName}</p>
+                    {duplicateResult.household?.applicationId && (
+                      <p className="text-sm text-muted-foreground">Application: {duplicateResult.household.applicationId}</p>
+                    )}
+                  </div>
+                )}
+                <p className="mt-2">Would you like to add a new application for this existing client?</p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleDuplicateReject}>
+                No, Enter Different ID
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleDuplicateConfirm}>
+                Yes, Use Existing Client
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );

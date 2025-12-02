@@ -65,6 +65,9 @@ export interface IStorage {
   // Case Activities
   createCaseActivity(activity: InsertCaseActivity): Promise<CaseActivity>;
   getCaseActivitiesForHousehold(householdId: string): Promise<CaseActivity[]>;
+  
+  // Registry lookup
+  findMemberByNationalId(nationalId: string): Promise<{ member: HouseholdMember; household: Household } | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -327,6 +330,21 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(caseActivities)
       .where(eq(caseActivities.householdId, householdId))
       .orderBy(desc(caseActivities.activityDate));
+  }
+
+  // Registry lookup
+  async findMemberByNationalId(nationalId: string): Promise<{ member: HouseholdMember; household: Household } | undefined> {
+    const normalizedId = nationalId.trim().toUpperCase();
+    const result = await db.select({
+      member: householdMembers,
+      household: households
+    })
+    .from(householdMembers)
+    .innerJoin(households, eq(householdMembers.householdId, households.id))
+    .where(sql`UPPER(TRIM(${householdMembers.nationalId})) = ${normalizedId}`)
+    .limit(1);
+    
+    return result[0];
   }
 }
 

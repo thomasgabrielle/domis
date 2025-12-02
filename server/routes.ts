@@ -126,6 +126,32 @@ export async function registerRoutes(
     }
   });
 
+  // ===== REGISTRY LOOKUP =====
+  
+  // Check for duplicate National ID
+  app.get("/api/registry/check-national-id/:nationalId", async (req, res) => {
+    try {
+      const nationalId = req.params.nationalId.trim();
+      if (!nationalId || nationalId.length < 3) {
+        return res.status(400).json({ error: "National ID must be at least 3 characters" });
+      }
+      
+      const result = await storage.findMemberByNationalId(nationalId);
+      
+      if (result) {
+        res.json({
+          found: true,
+          member: result.member,
+          household: result.household
+        });
+      } else {
+        res.json({ found: false });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ===== ASSESSMENTS =====
   
   // Create assessment
