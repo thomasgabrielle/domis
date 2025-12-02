@@ -187,8 +187,16 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
 });
 
-export const insertHouseholdSchema = createInsertSchema(households).omit({
+export const insertHouseholdSchema = createInsertSchema(households, {
+  intakeDate: z.coerce.date().optional(),
+  proxyDateOfBirth: z.coerce.date().optional().nullable(),
+  registrationDate: z.coerce.date().optional(),
+  enrollmentDate: z.coerce.date().optional().nullable(),
+  lastAssessmentDate: z.coerce.date().optional().nullable(),
+}).omit({
   id: true,
+  householdCode: true,
+  applicationId: true,
   createdAt: true,
   updatedAt: true,
 });

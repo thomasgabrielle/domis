@@ -56,7 +56,7 @@ export async function registerRoutes(
         const applicationId = `APP-${year}-${String(nextNum).padStart(3, '0')}`;
         
         const household = await storage.createHousehold(
-          { ...householdData, householdCode, applicationId },
+          { ...householdData, householdCode, applicationId } as any,
           membersData
         );
         
