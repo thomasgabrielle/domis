@@ -152,10 +152,10 @@ export function Registration() {
     const formData = new FormData(e.currentTarget);
     
     const household = {
-      province: formData.get("province") as string,
-      district: formData.get("district") as string,
-      village: formData.get("village") as string,
-      gpsCoordinates: formData.get("gps") as string || null,
+      province: locationData.province || formData.get("province") as string,
+      district: locationData.district || formData.get("district") as string,
+      village: locationData.village || formData.get("village") as string,
+      gpsCoordinates: locationData.gpsCoordinates || formData.get("gps") as string || null,
       intakeDate: formData.get("intakeDate") as string || new Date().toISOString(),
       outreachType: formData.get("outreachType") as string || null,
       outreachMethod: formData.get("outreachMethod") as string || null,
@@ -248,6 +248,7 @@ export function Registration() {
   const handleDuplicateConfirm = () => {
     if (!duplicateResult?.member) return;
     
+    const memberIndex = (duplicateResult as any).memberIndex || 0;
     const household = duplicateResult.household;
     const allMembers = duplicateResult.allMembers || [];
     
@@ -272,23 +273,42 @@ export function Registration() {
         lastName: m.lastName || "",
         dateOfBirth: m.dateOfBirth ? new Date(m.dateOfBirth).toISOString().split('T')[0] : "",
         gender: m.gender || "",
-        relationshipToHead: index === 0 ? "head" : (m.relationshipToHead || ""),
+        relationshipToHead: m.isHead ? "head" : (m.relationshipToHead || ""),
         nationalId: m.nationalId || "",
         disabilityStatus: m.disabilityStatus || false,
       }));
       
       setMembers(newMembers);
       setDuplicateBlocked({});
+      
+      const headMember = allMembers.find(m => m.isHead) || duplicateResult.member;
+      toast({
+        title: "Client Information Loaded",
+        description: `Form pre-filled with existing client: ${headMember.firstName} ${headMember.lastName} and ${allMembers.length} member(s)`,
+      });
+    } else {
+      const member = duplicateResult.member;
+      const newMembers = [...members];
+      newMembers[memberIndex] = {
+        ...newMembers[memberIndex],
+        firstName: member.firstName || "",
+        lastName: member.lastName || "",
+        dateOfBirth: member.dateOfBirth ? new Date(member.dateOfBirth).toISOString().split('T')[0] : "",
+        gender: member.gender || "",
+        nationalId: member.nationalId || "",
+        disabilityStatus: member.disabilityStatus || false,
+      };
+      setMembers(newMembers);
+      setDuplicateBlocked(prev => ({ ...prev, [memberIndex]: false }));
+      
+      toast({
+        title: "Client Information Loaded",
+        description: `Form pre-filled with existing client: ${member.firstName} ${member.lastName}`,
+      });
     }
     
     setDuplicateDialogOpen(false);
     setDuplicateResult(null);
-    
-    const headMember = allMembers.find(m => m.isHead) || duplicateResult.member;
-    toast({
-      title: "Client Information Loaded",
-      description: `Form pre-filled with existing client: ${headMember.firstName} ${headMember.lastName} and ${allMembers.length} member(s)`,
-    });
   };
 
   const handleDuplicateReject = () => {
