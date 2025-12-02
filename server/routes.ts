@@ -24,14 +24,15 @@ export async function registerRoutes(
       const householdData = insertHouseholdSchema.parse(req.body.household);
       const membersData = z.array(insertHouseholdMemberSchema).parse(req.body.members || []);
       
-      // Generate household code (HH-YYYY-XXX format)
+      // Generate household code (HH-YYYY-XXX format) and application ID (APP-YYYY-XXX format)
       const year = new Date().getFullYear();
       const allHouseholds = await storage.getAllHouseholds();
       const count = allHouseholds.length + 1;
       const householdCode = `HH-${year}-${String(count).padStart(3, '0')}`;
+      const applicationId = `APP-${year}-${String(count).padStart(3, '0')}`;
       
       const household = await storage.createHousehold(
-        { ...householdData, householdCode },
+        { ...householdData, householdCode, applicationId },
         membersData
       );
       
