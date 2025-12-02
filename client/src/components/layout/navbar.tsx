@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Building2, Users, ClipboardCheck, AlertCircle, Briefcase, CreditCard, BarChart3, Menu } from "lucide-react";
+import { Building2, Users, ClipboardCheck, AlertCircle, Briefcase, CreditCard, BarChart3, Menu, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -60,6 +60,12 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-4">
+          <Link href="/admin/users">
+            <Button variant="ghost" size="sm" className="hidden md:flex gap-2 text-muted-foreground hover:text-primary">
+              <Shield className="h-4 w-4" />
+              Admin
+            </Button>
+          </Link>
           <div className="hidden md:flex flex-col items-end mr-2">
             <span className="text-sm font-medium">Admin User</span>
             <span className="text-xs text-muted-foreground">Ministry of Social Affairs</span>

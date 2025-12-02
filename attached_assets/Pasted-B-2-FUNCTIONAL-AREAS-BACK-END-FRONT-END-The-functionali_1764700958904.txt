@@ -1,0 +1,23 @@
+B.2	FUNCTIONAL AREAS (BACK-END & FRONT-END)
+The functionality is based upon the widely accepted framework for social protection operations. In this section, we break down the different functional aspects of the MIS, beginning with a more detailed description of the functional requirements, the modules and services to enable these, as well as the user stories. Below are the major functional needs for version 1 of the MIS including both Back-End and Front-End:
+1.	Intake and Registration – the ability to add new ‘potential’ beneficiaries. The task here is to use a tablet or website form to enter the PAP applicant data. This also involves the following:
+•	Remote/offline data collection and/or website form or App
+•	Add ancillary photo/data/information to the applicant file
+•	Quality control via automated checks against existing data and information and Verification and Validation with other systems
+2.	Kobo link – data is collected using the application Kobo. To maintain synchronization between Kobo and the MIS, the form structure and format (questions/answers, etc.) need to be the same in each application. This mirroring will be accomplished such that any form in the MIS is identical to the Kobo form so that data transferred from the tablets/phones/computers fits seamlessly into the MIS. 
+3.	Eligibility Determination – the ability to determine eligibility based upon a pre-defined set of criteria. The social worker follows the policy and functions:
+•	An automated eligibility determination + justification procedure
+•	A manual eligibility determination + justification procedure
+•	Automated summary information and listings
+4.	Enrollment & Benefits – adding the entitlement to the different beneficiaries for a given period of time. This includes:
+•	Enrollment in one or more activities
+•	Allotting of packages to households
+•	Including a ‘shock responsive’ expansion option (vertical or horizontal)
+5.	Case Management – to follow progress, provide additional assistance, and update information, case management is required. This will further allow for:
+•	Activity and form-based case management
+•	Alerts and follow up
+6.	Analysis and Reporting  - the ability to ‘analyze’ data using tables, graphs, and maps; including the ability to create reports and downloads. this includes the following:
+•	Query and summarize data
+•	Build dashboards with graphical elements (tables, charts, maps)
+•	Output reports in .pdf format
+•	Output excel files with data
