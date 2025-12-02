@@ -190,6 +190,8 @@ export function ApplicationDetail() {
               </Button>
             </div>
             <p className="text-muted-foreground">
+              Application ID: <span className="font-mono">{household.applicationId || household.householdCode}</span>
+              {' '}&bull;{' '}
               Household Code: <span className="font-mono">{household.householdCode}</span>
             </p>
           </div>
