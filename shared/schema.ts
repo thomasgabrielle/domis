@@ -18,6 +18,7 @@ export const users = pgTable("users", {
 export const households = pgTable("households", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   householdCode: text("household_code").notNull().unique(),
+  applicationId: text("application_id").notNull().unique(),
   registrationDate: timestamp("registration_date").defaultNow().notNull(),
   
   // Intake Information
