@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Building2, Users, ClipboardCheck, AlertCircle, Briefcase, CreditCard, BarChart3, Menu, Shield, FileSpreadsheet } from "lucide-react";
+import { Building2, Users, ClipboardCheck, AlertCircle, Briefcase, CreditCard, BarChart3, Menu, Shield, FileSpreadsheet, BookUser } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -14,6 +14,7 @@ export function Navbar() {
     { href: "/registration", label: "Intake", icon: Users },
     { href: "/assessments", label: "Assessments", icon: ClipboardCheck },
     { href: "/worksheet", label: "Applications", icon: FileSpreadsheet },
+    { href: "/registry", label: "Registry", icon: BookUser },
     { href: "/cases", label: "Case Mgmt", icon: Briefcase },
     { href: "/payments", label: "Payments", icon: CreditCard },
     { href: "/grievances", label: "Grievances", icon: AlertCircle },
