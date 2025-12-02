@@ -26,6 +26,12 @@ import { Plus, Trash2, MapPin, User, FileText, Upload, Calendar, UserCheck, Load
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 
+type IncomeEntry = {
+  type: string;
+  monthlyAmount: string;
+  justificationProvided: string;
+};
+
 type MemberForm = {
   firstName: string;
   lastName: string;
@@ -41,7 +47,7 @@ type MemberForm = {
   ongoingCertification: string;
   professionalSituation: string;
   employerDetails: string;
-  incomeType: string[];
+  incomeType: IncomeEntry[];
 };
 
 const CERTIFICATION_OPTIONS = [
@@ -253,7 +259,7 @@ export function Registration() {
       ongoingCertification: member.ongoingCertification || null,
       professionalSituation: member.professionalSituation || null,
       employerDetails: member.employerDetails || null,
-      incomeType: member.incomeType.length > 0 ? member.incomeType.join(",") : null,
+      incomeType: member.incomeType.length > 0 ? JSON.stringify(member.incomeType) : null,
     }));
 
     createHouseholdMutation.mutate({
@@ -359,7 +365,7 @@ export function Registration() {
         ongoingCertification: m.ongoingCertification || "",
         professionalSituation: m.professionalSituation || "",
         employerDetails: m.employerDetails || "",
-        incomeType: m.incomeType ? m.incomeType.split(",") : [],
+        incomeType: m.incomeType ? (typeof m.incomeType === 'string' ? JSON.parse(m.incomeType) : m.incomeType) : [],
       }));
       
       setMembers(newMembers);
@@ -388,7 +394,7 @@ export function Registration() {
         ongoingCertification: member.ongoingCertification || "",
         professionalSituation: member.professionalSituation || "",
         employerDetails: member.employerDetails || "",
-        incomeType: member.incomeType ? member.incomeType.split(",") : [],
+        incomeType: member.incomeType ? (typeof member.incomeType === 'string' ? JSON.parse(member.incomeType) : member.incomeType) : [],
       };
       setMembers(newMembers);
       setDuplicateBlocked(prev => ({ ...prev, [memberIndex]: false }));
@@ -1226,7 +1232,7 @@ export function Registration() {
                       <h4 className="font-medium text-muted-foreground">Income</h4>
                       
                       <div className="space-y-2">
-                        <Label htmlFor={`incomeType-${index}`}>Income Type</Label>
+                        <Label>Income Type</Label>
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
@@ -1236,7 +1242,7 @@ export function Registration() {
                               data-testid={`select-income-type-${index}`}
                             >
                               {member.incomeType.length > 0
-                                ? `${member.incomeType.length} selected`
+                                ? `${member.incomeType.length} income source(s) selected`
                                 : "Select income types..."}
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
@@ -1244,67 +1250,105 @@ export function Registration() {
                           <PopoverContent className="w-[400px] p-0" align="start">
                             <ScrollArea className="h-[300px] p-4">
                               <div className="space-y-2">
-                                {INCOME_TYPE_OPTIONS.map((option) => (
-                                  <div key={option.value} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`income-${index}-${option.value}`}
-                                      checked={member.incomeType.includes(option.value)}
-                                      onCheckedChange={(checked) => {
-                                        const newMembers = [...members];
-                                        if (checked) {
-                                          if (option.value === "none") {
-                                            newMembers[index].incomeType = ["none"];
+                                {INCOME_TYPE_OPTIONS.map((option) => {
+                                  const isSelected = member.incomeType.some(inc => inc.type === option.value);
+                                  return (
+                                    <div key={option.value} className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`income-${index}-${option.value}`}
+                                        checked={isSelected}
+                                        onCheckedChange={(checked) => {
+                                          const newMembers = [...members];
+                                          if (checked) {
+                                            if (option.value === "none") {
+                                              newMembers[index].incomeType = [{ type: "none", monthlyAmount: "", justificationProvided: "" }];
+                                            } else {
+                                              const filtered = newMembers[index].incomeType.filter(inc => inc.type !== "none");
+                                              newMembers[index].incomeType = [...filtered, { type: option.value, monthlyAmount: "", justificationProvided: "" }];
+                                            }
                                           } else {
-                                            const filtered = newMembers[index].incomeType.filter(v => v !== "none");
-                                            newMembers[index].incomeType = [...filtered, option.value];
+                                            newMembers[index].incomeType = newMembers[index].incomeType.filter(inc => inc.type !== option.value);
                                           }
-                                        } else {
-                                          newMembers[index].incomeType = 
-                                            newMembers[index].incomeType.filter(v => v !== option.value);
-                                        }
-                                        setMembers(newMembers);
-                                      }}
-                                    />
-                                    <Label
-                                      htmlFor={`income-${index}-${option.value}`}
-                                      className="text-sm font-normal cursor-pointer"
-                                    >
-                                      {option.label}
-                                    </Label>
-                                  </div>
-                                ))}
+                                          setMembers(newMembers);
+                                        }}
+                                      />
+                                      <Label
+                                        htmlFor={`income-${index}-${option.value}`}
+                                        className="text-sm font-normal cursor-pointer"
+                                      >
+                                        {option.label}
+                                      </Label>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </ScrollArea>
                           </PopoverContent>
                         </Popover>
-                        {member.incomeType.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {member.incomeType.map((incomeValue) => {
-                              const income = INCOME_TYPE_OPTIONS.find(o => o.value === incomeValue);
-                              return (
-                                <span
-                                  key={incomeValue}
-                                  className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-muted rounded-md"
-                                >
-                                  {income?.label || incomeValue}
+                      </div>
+                      
+                      {member.incomeType.length > 0 && (
+                        <div className="space-y-4 mt-4">
+                          {member.incomeType.map((incomeEntry, incIdx) => {
+                            const incomeOption = INCOME_TYPE_OPTIONS.find(o => o.value === incomeEntry.type);
+                            return (
+                              <div key={incomeEntry.type} className="p-4 border rounded-lg bg-muted/30 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium text-sm">{incomeOption?.label || incomeEntry.type}</span>
                                   <button
                                     type="button"
                                     onClick={() => {
                                       const newMembers = [...members];
-                                      newMembers[index].incomeType = 
-                                        newMembers[index].incomeType.filter(v => v !== incomeValue);
+                                      newMembers[index].incomeType = newMembers[index].incomeType.filter(inc => inc.type !== incomeEntry.type);
                                       setMembers(newMembers);
                                     }}
-                                    className="hover:text-destructive"
+                                    className="text-muted-foreground hover:text-destructive"
                                   >
-                                    <X className="h-3 w-3" />
+                                    <X className="h-4 w-4" />
                                   </button>
-                                </span>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <div className="space-y-1">
+                                    <Label htmlFor={`monthlyAmount-${index}-${incIdx}`} className="text-xs">Monthly Amount</Label>
+                                    <Input
+                                      id={`monthlyAmount-${index}-${incIdx}`}
+                                      type="number"
+                                      placeholder="0.00"
+                                      value={incomeEntry.monthlyAmount}
+                                      onChange={(e) => {
+                                        const newMembers = [...members];
+                                        newMembers[index].incomeType[incIdx].monthlyAmount = e.target.value;
+                                        setMembers(newMembers);
+                                      }}
+                                      data-testid={`input-monthly-amount-${index}-${incIdx}`}
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label htmlFor={`justification-${index}-${incIdx}`} className="text-xs">Justification Provided</Label>
+                                    <Select
+                                      value={incomeEntry.justificationProvided}
+                                      onValueChange={(value) => {
+                                        const newMembers = [...members];
+                                        newMembers[index].incomeType[incIdx].justificationProvided = value;
+                                        setMembers(newMembers);
+                                      }}
+                                    >
+                                      <SelectTrigger id={`justification-${index}-${incIdx}`} data-testid={`select-justification-${index}-${incIdx}`}>
+                                        <SelectValue placeholder="Select..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="no">No</SelectItem>
+                                        <SelectItem value="yes">Yes</SelectItem>
+                                        <SelectItem value="n/a">N/A</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
