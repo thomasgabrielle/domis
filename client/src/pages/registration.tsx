@@ -44,24 +44,37 @@ type HouseholdForm = {
   notes: string;
 };
 
+type DuplicateMember = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  gender: string;
+  nationalId: string | null;
+  relationshipToHead: string;
+  disabilityStatus: boolean;
+  isHead: boolean;
+};
+
 type DuplicateResult = {
   found: boolean;
-  member?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    dateOfBirth: string;
-    gender: string;
-    nationalId: string;
-    disabilityStatus: boolean;
-  };
+  member?: DuplicateMember;
   household?: {
     id: string;
     applicationId: string;
     province: string;
     district: string;
     village: string;
+    gpsCoordinates: string | null;
   };
+  allMembers?: DuplicateMember[];
+};
+
+type LocationForm = {
+  province: string;
+  district: string;
+  village: string;
+  gpsCoordinates: string;
 };
 
 export function Registration() {
@@ -79,6 +92,13 @@ export function Registration() {
       disabilityStatus: false,
     }
   ]);
+  
+  const [locationData, setLocationData] = useState<LocationForm>({
+    province: "",
+    district: "",
+    village: "",
+    gpsCoordinates: "",
+  });
   
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [duplicateResult, setDuplicateResult] = useState<DuplicateResult | null>(null);
@@ -228,28 +248,46 @@ export function Registration() {
   const handleDuplicateConfirm = () => {
     if (!duplicateResult?.member) return;
     
-    const memberIndex = (duplicateResult as any).memberIndex || 0;
-    const member = duplicateResult.member;
+    const household = duplicateResult.household;
+    const allMembers = duplicateResult.allMembers || [];
     
-    const newMembers = [...members];
-    newMembers[memberIndex] = {
-      ...newMembers[memberIndex],
-      firstName: member.firstName || "",
-      lastName: member.lastName || "",
-      dateOfBirth: member.dateOfBirth ? new Date(member.dateOfBirth).toISOString().split('T')[0] : "",
-      gender: member.gender || "",
-      nationalId: member.nationalId || "",
-      disabilityStatus: member.disabilityStatus || false,
-    };
-    setMembers(newMembers);
+    if (household) {
+      setLocationData({
+        province: household.province || "",
+        district: household.district || "",
+        village: household.village || "",
+        gpsCoordinates: household.gpsCoordinates || "",
+      });
+    }
     
-    setDuplicateBlocked(prev => ({ ...prev, [memberIndex]: false }));
+    if (allMembers.length > 0) {
+      const sortedMembers = [...allMembers].sort((a, b) => {
+        if (a.isHead) return -1;
+        if (b.isHead) return 1;
+        return 0;
+      });
+      
+      const newMembers: MemberForm[] = sortedMembers.map((m, index) => ({
+        firstName: m.firstName || "",
+        lastName: m.lastName || "",
+        dateOfBirth: m.dateOfBirth ? new Date(m.dateOfBirth).toISOString().split('T')[0] : "",
+        gender: m.gender || "",
+        relationshipToHead: index === 0 ? "head" : (m.relationshipToHead || ""),
+        nationalId: m.nationalId || "",
+        disabilityStatus: m.disabilityStatus || false,
+      }));
+      
+      setMembers(newMembers);
+      setDuplicateBlocked({});
+    }
+    
     setDuplicateDialogOpen(false);
     setDuplicateResult(null);
     
+    const headMember = allMembers.find(m => m.isHead) || duplicateResult.member;
     toast({
       title: "Client Information Loaded",
-      description: `Form pre-filled with existing client: ${member.firstName} ${member.lastName}`,
+      description: `Form pre-filled with existing client: ${headMember.firstName} ${headMember.lastName} and ${allMembers.length} member(s)`,
     });
   };
 
@@ -426,7 +464,12 @@ export function Registration() {
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="province">Province/Region</Label>
-                  <Select name="province" required>
+                  <Select 
+                    name="province" 
+                    required
+                    value={locationData.province}
+                    onValueChange={(value) => setLocationData(prev => ({ ...prev, province: value }))}
+                  >
                     <SelectTrigger id="province" data-testid="select-province">
                       <SelectValue placeholder="Select Province" />
                     </SelectTrigger>
@@ -440,7 +483,12 @@ export function Registration() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="district">District</Label>
-                  <Select name="district" required>
+                  <Select 
+                    name="district" 
+                    required
+                    value={locationData.district}
+                    onValueChange={(value) => setLocationData(prev => ({ ...prev, district: value }))}
+                  >
                     <SelectTrigger id="district" data-testid="select-district">
                       <SelectValue placeholder="Select District" />
                     </SelectTrigger>
@@ -448,17 +496,39 @@ export function Registration() {
                       <SelectItem value="Capital District">Capital District</SelectItem>
                       <SelectItem value="River District">River District</SelectItem>
                       <SelectItem value="Mountain District">Mountain District</SelectItem>
+                      <SelectItem value="Lake District">Lake District</SelectItem>
+                      <SelectItem value="Coastal District">Coastal District</SelectItem>
+                      <SelectItem value="Highland District">Highland District</SelectItem>
+                      <SelectItem value="Valley District">Valley District</SelectItem>
+                      <SelectItem value="Border District">Border District</SelectItem>
+                      <SelectItem value="Desert District">Desert District</SelectItem>
+                      <SelectItem value="Plains District">Plains District</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="village">Village / Community</Label>
-                  <Input id="village" name="village" placeholder="Enter village name" required data-testid="input-village" />
+                  <Input 
+                    id="village" 
+                    name="village" 
+                    placeholder="Enter village name" 
+                    required 
+                    data-testid="input-village"
+                    value={locationData.village}
+                    onChange={(e) => setLocationData(prev => ({ ...prev, village: e.target.value }))}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="gps">GPS Coordinates (Optional)</Label>
                   <div className="flex gap-2">
-                    <Input id="gps" name="gps" placeholder="Lat, Long" data-testid="input-gps" />
+                    <Input 
+                      id="gps" 
+                      name="gps" 
+                      placeholder="Lat, Long" 
+                      data-testid="input-gps"
+                      value={locationData.gpsCoordinates}
+                      onChange={(e) => setLocationData(prev => ({ ...prev, gpsCoordinates: e.target.value }))}
+                    />
                     <Button type="button" variant="outline" size="icon" title="Get Current Location" data-testid="button-gps">
                       <MapPin className="h-4 w-4" />
                     </Button>
