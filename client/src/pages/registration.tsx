@@ -1347,6 +1347,15 @@ export function Registration() {
                               </div>
                             );
                           })}
+                          
+                          <div className="p-4 border-2 border-primary/20 rounded-lg bg-primary/5">
+                            <div className="flex items-center justify-between">
+                              <Label className="font-medium">Overall Income of Member</Label>
+                              <span className="text-lg font-semibold" data-testid={`text-overall-income-${index}`}>
+                                {member.incomeType.reduce((sum, inc) => sum + (parseFloat(inc.monthlyAmount) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
