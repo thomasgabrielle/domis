@@ -551,11 +551,43 @@ export function Registration() {
                     </div>
                     
                     <div className="mt-4 flex items-center space-x-2">
-                      <Checkbox id={`disability-${index}`} name={`disability-${index}`} data-testid={`checkbox-disability-${index}`} />
+                      <Checkbox 
+                        id={`disability-${index}`} 
+                        name={`disability-${index}`} 
+                        checked={member.disabilityStatus}
+                        onCheckedChange={(checked) => {
+                          const newMembers = [...members];
+                          newMembers[index].disabilityStatus = checked === true;
+                          setMembers(newMembers);
+                        }}
+                        data-testid={`checkbox-disability-${index}`} 
+                      />
                       <Label htmlFor={`disability-${index}`} className="font-normal text-muted-foreground">
                         This member has a documented disability
                       </Label>
                     </div>
+                    
+                    {member.disabilityStatus && (
+                      <div className="mt-4 p-4 bg-muted/50 rounded-lg animate-in fade-in slide-in-from-top-2">
+                        <Label htmlFor={`disabilityDoc-${index}`} className="text-sm font-medium">
+                          Upload Disability Documentation
+                        </Label>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Input 
+                            id={`disabilityDoc-${index}`}
+                            name={`disabilityDoc-${index}`}
+                            type="file" 
+                            className="flex-1"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                            data-testid={`input-disability-doc-${index}`} 
+                          />
+                          <Button type="button" variant="outline" size="icon" title="Upload Document">
+                            <Upload className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">Upload medical certificate or official documentation</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </CardContent>
