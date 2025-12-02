@@ -94,6 +94,8 @@ export function Registration() {
       outreachMethod: formData.get("outreachMethod") as string || null,
       isOnOwnBehalf: formData.get("isOnOwnBehalf") === "yes",
       requestPurpose: formData.get("requestPurpose") as string || null,
+      actionTaken: formData.get("actionTaken") as string || null,
+      followUpNotes: formData.get("followUpNotes") as string || null,
       programStatus: "pending_assessment",
     };
 
@@ -221,6 +223,34 @@ export function Registration() {
                       <SelectItem value="undefined">Undefined</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="actionTaken">Action Taken</Label>
+                  <Select name="actionTaken" required>
+                    <SelectTrigger id="actionTaken" data-testid="select-action-taken">
+                      <SelectValue placeholder="Select action taken" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="referred_sws_seaman">Referred to SWS: S. Seaman</SelectItem>
+                      <SelectItem value="referred_sws_alexander">Referred to SWS: J. Alexander</SelectItem>
+                      <SelectItem value="referred_sws_paquette">Referred to SWS: G. Paquette</SelectItem>
+                      <SelectItem value="referred_sws_other">Referred to other SWS Officer</SelectItem>
+                      <SelectItem value="referred_gender">Referred to Gender</SelectItem>
+                      <SelectItem value="referred_probation">Referred to Probation</SelectItem>
+                      <SelectItem value="referred_child_protection">Referred to Child Protection</SelectItem>
+                      <SelectItem value="general_question_answered">Answer to general question provided</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="followUpNotes">Additional Information on Follow Up</Label>
+                  <Textarea 
+                    id="followUpNotes" 
+                    name="followUpNotes" 
+                    placeholder="Enter any additional notes regarding follow-up actions..."
+                    rows={3}
+                    data-testid="textarea-follow-up-notes"
+                  />
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="fileUpload">Upload Additional Files (Optional)</Label>

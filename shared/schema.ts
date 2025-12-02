@@ -26,6 +26,8 @@ export const households = pgTable("households", {
   outreachMethod: text("outreach_method"),
   isOnOwnBehalf: boolean("is_on_own_behalf").default(true),
   requestPurpose: text("request_purpose"),
+  actionTaken: text("action_taken"),
+  followUpNotes: text("follow_up_notes"),
   attachmentUrl: text("attachment_url"),
   
   // Location
