@@ -1183,43 +1183,18 @@ export function Registration() {
                       
                       <div className="space-y-2">
                         <Label htmlFor={`employerDetails-${index}`}>Employer's Name, Employment History and Details</Label>
-                        <Select
+                        <Textarea
+                          id={`employerDetails-${index}`}
                           value={member.employerDetails}
-                          onValueChange={(value) => {
+                          onChange={(e) => {
                             const newMembers = [...members];
-                            newMembers[index].employerDetails = value;
+                            newMembers[index].employerDetails = e.target.value;
                             setMembers(newMembers);
                           }}
-                        >
-                          <SelectTrigger id={`employerDetails-${index}`} data-testid={`select-employer-details-${index}`}>
-                            <SelectValue placeholder="Select industry/sector" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="accommodations">Accommodations (Hotels, Villas, Guest Houses etc.)</SelectItem>
-                            <SelectItem value="automotive">Automotive (Sales, repairs)</SelectItem>
-                            <SelectItem value="construction">Construction</SelectItem>
-                            <SelectItem value="education">Education (Early childhood, daycare, Teacher)</SelectItem>
-                            <SelectItem value="utilities">Utilities (Electricity and Water)</SelectItem>
-                            <SelectItem value="financial_insurance">Financial and Insurance Activities</SelectItem>
-                            <SelectItem value="fisheries_agriculture">Fisheries and Agriculture</SelectItem>
-                            <SelectItem value="food_services">Food Services (Restaurants, Eateries, Bars etc.)</SelectItem>
-                            <SelectItem value="health_social_work">Human Health and Social Work</SelectItem>
-                            <SelectItem value="information_communication">Information and Communication</SelectItem>
-                            <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                            <SelectItem value="marine">Marine (Charter Yachts, Charter Boats, Ferry etc.)</SelectItem>
-                            <SelectItem value="mining_quarrying">Mining and Quarrying</SelectItem>
-                            <SelectItem value="personal_care">Personal Care (Barbershops, Hair Salons, Nail Technicians, Spas)</SelectItem>
-                            <SelectItem value="professional_admin">Professional and Administrative Services</SelectItem>
-                            <SelectItem value="public_admin">Public Administration, Defence and Social Security (Government, RVIPF, Statutory Bodies)</SelectItem>
-                            <SelectItem value="real_estate">Real Estate</SelectItem>
-                            <SelectItem value="retail_grocery">Retail: Groceries, Mini Marts, Supermarkets</SelectItem>
-                            <SelectItem value="retail_non_grocery">Retail: Non-Grocery (Clothing, Electronics)</SelectItem>
-                            <SelectItem value="transportation_storage">Transportation & Storage (Heavy Equipment, General Truck Services etc.)</SelectItem>
-                            <SelectItem value="transportation_passenger">Transportation (Taxi, School Bus etc.)</SelectItem>
-                            <SelectItem value="wholesale">Wholesale</SelectItem>
-                            <SelectItem value="other">Other (Please specify)</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          placeholder="Enter employer name, employment history, and other relevant details..."
+                          className="min-h-[80px]"
+                          data-testid={`input-employer-details-${index}`}
+                        />
                       </div>
                     </div>
                   </div>
