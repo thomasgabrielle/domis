@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Plus, Trash2, MapPin, User, FileText } from "lucide-react";
+import { Plus, Trash2, MapPin, User, FileText, Upload, Calendar } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 
@@ -89,6 +89,11 @@ export function Registration() {
       district: formData.get("district") as string,
       village: formData.get("village") as string,
       gpsCoordinates: formData.get("gps") as string || null,
+      intakeDate: formData.get("intakeDate") as string || new Date().toISOString(),
+      outreachType: formData.get("outreachType") as string || null,
+      outreachMethod: formData.get("outreachMethod") as string || null,
+      isOnOwnBehalf: formData.get("isOnOwnBehalf") === "yes",
+      requestPurpose: formData.get("requestPurpose") as string || null,
       programStatus: "pending_assessment",
     };
 
@@ -142,6 +147,101 @@ export function Registration() {
         <form onSubmit={handleSubmit}>
           <div className="space-y-6">
             
+            {/* Intake Information Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <CardTitle>Intake Information</CardTitle>
+                </div>
+                <CardDescription>Capture how this applicant reached the program.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="intakeDate">Date of Intake</Label>
+                  <Input 
+                    id="intakeDate" 
+                    name="intakeDate" 
+                    type="date" 
+                    defaultValue={new Date().toISOString().split('T')[0]}
+                    required 
+                    data-testid="input-intake-date" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="outreachType">Type of Outreach</Label>
+                  <Select name="outreachType" required>
+                    <SelectTrigger id="outreachType" data-testid="select-outreach-type">
+                      <SelectValue placeholder="Select outreach type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="proactive_dss">Proactive Outreach to DSS</SelectItem>
+                      <SelectItem value="proactive_vcc">Proactive Outreach to VCC</SelectItem>
+                      <SelectItem value="referral">Referral</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="outreachMethod">Outreach Method</Label>
+                  <Select name="outreachMethod" required>
+                    <SelectTrigger id="outreachMethod" data-testid="select-outreach-method">
+                      <SelectValue placeholder="Select method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="phone">Phone</SelectItem>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="walk_in">Walk-in</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="isOnOwnBehalf">Is this person here on their own behalf?</Label>
+                  <Select name="isOnOwnBehalf" required>
+                    <SelectTrigger id="isOnOwnBehalf" data-testid="select-own-behalf">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="yes">Yes</SelectItem>
+                      <SelectItem value="no">No (Proxy)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="requestPurpose">Purpose of Request</Label>
+                  <Select name="requestPurpose" required>
+                    <SelectTrigger id="requestPurpose" data-testid="select-request-purpose">
+                      <SelectValue placeholder="Select purpose" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general_question">General Question</SelectItem>
+                      <SelectItem value="social_welfare">Request for Social Welfare Service</SelectItem>
+                      <SelectItem value="bureau_gender">Request for Bureau of Gender Affairs</SelectItem>
+                      <SelectItem value="probation_services">Request for Probation Services</SelectItem>
+                      <SelectItem value="child_protection">Request for Child Protection Matters</SelectItem>
+                      <SelectItem value="undefined">Undefined</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="fileUpload">Upload Additional Files (Optional)</Label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      id="fileUpload" 
+                      name="fileUpload" 
+                      type="file" 
+                      className="flex-1"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      data-testid="input-file-upload" 
+                    />
+                    <Button type="button" variant="outline" size="icon" title="Upload File">
+                      <Upload className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Supported: PDF, DOC, DOCX, JPG, PNG</p>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Location Section */}
             <Card>
               <CardHeader>

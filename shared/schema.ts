@@ -20,6 +20,14 @@ export const households = pgTable("households", {
   householdCode: text("household_code").notNull().unique(),
   registrationDate: timestamp("registration_date").defaultNow().notNull(),
   
+  // Intake Information
+  intakeDate: timestamp("intake_date").defaultNow().notNull(),
+  outreachType: text("outreach_type"),
+  outreachMethod: text("outreach_method"),
+  isOnOwnBehalf: boolean("is_on_own_behalf").default(true),
+  requestPurpose: text("request_purpose"),
+  attachmentUrl: text("attachment_url"),
+  
   // Location
   province: text("province").notNull(),
   district: text("district").notNull(),
