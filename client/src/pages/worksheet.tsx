@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Filter, Search, Users } from "lucide-react";
+import { Download, Filter, Search, Users, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useLocation } from "wouter";
 
 type ApplicantRow = {
   id: string;
@@ -25,6 +26,7 @@ type ApplicantRow = {
 };
 
 export function Worksheet() {
+  const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [regionFilter, setRegionFilter] = useState("all");
@@ -245,11 +247,17 @@ export function Worksheet() {
                       <TableHead>Region</TableHead>
                       <TableHead>District</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredApplicants.map((applicant) => (
-                      <TableRow key={applicant.id} data-testid={`row-applicant-${applicant.id}`}>
+                      <TableRow 
+                        key={applicant.id} 
+                        data-testid={`row-applicant-${applicant.id}`}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => setLocation(`/application/${applicant.householdId}`)}
+                      >
                         <TableCell className="font-medium" data-testid={`text-firstname-${applicant.id}`}>
                           {applicant.firstName}
                         </TableCell>
@@ -276,6 +284,9 @@ export function Worksheet() {
                         </TableCell>
                         <TableCell data-testid={`badge-status-${applicant.id}`}>
                           {getStatusBadge(applicant.status)}
+                        </TableCell>
+                        <TableCell>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         </TableCell>
                       </TableRow>
                     ))}

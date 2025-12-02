@@ -12,6 +12,7 @@ import { Assessments } from "@/pages/assessments";
 import { CaseManagement } from "@/pages/cases";
 import { Reports } from "@/pages/reports";
 import { Worksheet } from "@/pages/worksheet";
+import { ApplicationDetail } from "@/pages/application-detail";
 import { AdminUsers } from "@/pages/admin/users";
 import { AdminPrograms } from "@/pages/admin/programs";
 import { AdminSettings } from "@/pages/admin/settings";
@@ -30,6 +31,7 @@ function Router() {
       <Route path="/cases" component={CaseManagement} />
       <Route path="/reports" component={Reports} />
       <Route path="/worksheet" component={Worksheet} />
+      <Route path="/application/:id" component={ApplicationDetail} />
       
       {/* Admin Routes */}
       <Route path="/admin/users" component={AdminUsers} />
