@@ -983,7 +983,15 @@ export function Registration() {
                       </div>
                       <div className="space-y-2">
                         <Label>Relationship to Head</Label>
-                        <Select name={`relationship-${index}`} defaultValue={index === 0 ? "head" : undefined} disabled={index === 0}>
+                        <Select 
+                          name={`relationship-${index}`} 
+                          value={member.relationshipToHead}
+                          onValueChange={(value) => {
+                            const newMembers = [...members];
+                            newMembers[index].relationshipToHead = value;
+                            setMembers(newMembers);
+                          }}
+                        >
                           <SelectTrigger data-testid={`select-relationship-${index}`}>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
