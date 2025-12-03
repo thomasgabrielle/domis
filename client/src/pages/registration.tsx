@@ -145,7 +145,7 @@ export function Registration() {
       lastName: "",
       dateOfBirth: "",
       gender: "",
-      relationshipToHead: "head",
+      relationshipToHead: "",
       nationalId: "",
       disabilityStatus: false,
       maritalStatus: "",
@@ -248,7 +248,7 @@ export function Registration() {
       lastName: formData.get(`lastName-${index}`) as string,
       dateOfBirth: new Date(formData.get(`dateOfBirth-${index}`) as string),
       gender: formData.get(`gender-${index}`) as string,
-      relationshipToHead: index === 0 ? "head" : (formData.get(`relationship-${index}`) as string),
+      relationshipToHead: formData.get(`relationship-${index}`) as string,
       nationalId: formData.get(`nationalId-${index}`) as string || null,
       disabilityStatus: formData.get(`disability-${index}`) === "on",
       isHead: index === 0,
@@ -800,7 +800,7 @@ export function Registration() {
                     {index > 0 && <Separator className="my-6" />}
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="font-medium text-sm uppercase tracking-wide text-muted-foreground">
-                        {index === 0 ? "Head of Household" : `Member #${index + 1}`}
+                        {`Member #${index + 1}`}
                       </h3>
                       {index > 0 && (
                         <Button 
@@ -947,45 +947,6 @@ export function Registration() {
                         <p className="text-xs text-muted-foreground">Upload a photo or scan of the National ID</p>
                       </div>
                     </div>
-                    
-                    <div className="mt-4 flex items-center space-x-2">
-                      <Checkbox 
-                        id={`disability-${index}`} 
-                        name={`disability-${index}`} 
-                        checked={member.disabilityStatus}
-                        onCheckedChange={(checked) => {
-                          const newMembers = [...members];
-                          newMembers[index].disabilityStatus = checked === true;
-                          setMembers(newMembers);
-                        }}
-                        data-testid={`checkbox-disability-${index}`} 
-                      />
-                      <Label htmlFor={`disability-${index}`} className="font-normal text-muted-foreground">
-                        This member has a documented disability
-                      </Label>
-                    </div>
-                    
-                    {member.disabilityStatus && (
-                      <div className="mt-4 p-4 bg-muted/50 rounded-lg animate-in fade-in slide-in-from-top-2">
-                        <Label htmlFor={`disabilityDoc-${index}`} className="text-sm font-medium">
-                          Upload Disability Documentation
-                        </Label>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Input 
-                            id={`disabilityDoc-${index}`}
-                            name={`disabilityDoc-${index}`}
-                            type="file" 
-                            className="flex-1"
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                            data-testid={`input-disability-doc-${index}`} 
-                          />
-                          <Button type="button" variant="outline" size="icon" title="Upload Document">
-                            <Upload className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">Upload medical certificate or official documentation</p>
-                      </div>
-                    )}
                     
                     <Separator className="my-6" />
                     
