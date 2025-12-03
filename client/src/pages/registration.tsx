@@ -48,6 +48,17 @@ type MemberForm = {
   professionalSituation: string;
   employerDetails: string;
   incomeType: IncomeEntry[];
+  physicalDisabilities: string[];
+  physicalOther: string;
+  physicalProofMedicalReport: string;
+  mentalDisabilities: string[];
+  mentalOther: string;
+  mentalProofMedicalReport: string;
+  chronicIllness: string[];
+  chronicOther: string;
+  chronicProofMedicalReport: string;
+  workingAbilityImplications: string;
+  inabilityToWorkProof: string;
 };
 
 const CERTIFICATION_OPTIONS = [
@@ -82,6 +93,59 @@ const INCOME_TYPE_OPTIONS = [
   { value: "maintenance_alimony", label: "Monthly maintenance, alemonies" },
   { value: "other_sources", label: "Monthly other sources (ex: insurance pay-out)" },
   { value: "family_support", label: "Family support" },
+];
+
+const PHYSICAL_DISABILITY_OPTIONS = [
+  { value: "none", label: "No physical disabilities" },
+  { value: "some_vision", label: "Some vision impairment (includes difficulty seeing even with glasses, partially blind)" },
+  { value: "total_vision", label: "Total vision impairment (legally blind, totally blind)" },
+  { value: "some_hearing", label: "Some hearing impairment (includes difficulty hearing even with hearing aids, partially deaf)" },
+  { value: "total_hearing", label: "Total hearing impairment" },
+  { value: "mobility_limb", label: "Mobility/Moving (due to absent or impaired limb)" },
+  { value: "mobility_paralysis", label: "Mobility/Moving (due to paralysis, quadriplegic)" },
+  { value: "gripping", label: "Gripping (unable to use fingers to grip or handle objects)" },
+  { value: "other", label: "Other" },
+];
+
+const MENTAL_DISABILITY_OPTIONS = [
+  { value: "none", label: "No mental health problems" },
+  { value: "learning_challenges", label: "Learning challenges (autism etc)" },
+  { value: "personality_disorders", label: "Personality disorders (bipolar, schizophrenia, paranoia etc)" },
+  { value: "anxiety", label: "Anxiety" },
+  { value: "ptsd", label: "PTSD" },
+  { value: "depression", label: "Depression" },
+  { value: "other", label: "Other" },
+];
+
+const CHRONIC_ILLNESS_OPTIONS = [
+  { value: "none", label: "No chronic health problems" },
+  { value: "asthma", label: "Asthma" },
+  { value: "arthritis", label: "Arthritis" },
+  { value: "cancer", label: "Cancer" },
+  { value: "dementia", label: "Dementia" },
+  { value: "diabetes", label: "Diabetes" },
+  { value: "epilepsy", label: "Epilepsy" },
+  { value: "hypertension", label: "Hypertension" },
+  { value: "kidney_disease", label: "Kidney disease" },
+  { value: "other", label: "Other" },
+];
+
+const PROOF_MEDICAL_REPORT_OPTIONS = [
+  { value: "self_declared", label: "Self-declared" },
+  { value: "medical_report", label: "Medical report provided" },
+  { value: "sw_checkin", label: "SW check-in with medical professional or SS" },
+];
+
+const WORKING_ABILITY_OPTIONS = [
+  { value: "unknown", label: "Unknown" },
+  { value: "fully_able", label: "Fully able to work" },
+  { value: "unable", label: "Unable to work" },
+  { value: "part_time", label: "Can work part-time" },
+];
+
+const INABILITY_PROOF_OPTIONS = [
+  { value: "medical_report_supports", label: "Medical report supports" },
+  { value: "not_proved", label: "Not proved (self declared)" },
 ];
 
 type HouseholdForm = {
@@ -156,6 +220,17 @@ export function Registration() {
       professionalSituation: "",
       employerDetails: "",
       incomeType: [],
+      physicalDisabilities: [],
+      physicalOther: "",
+      physicalProofMedicalReport: "",
+      mentalDisabilities: [],
+      mentalOther: "",
+      mentalProofMedicalReport: "",
+      chronicIllness: [],
+      chronicOther: "",
+      chronicProofMedicalReport: "",
+      workingAbilityImplications: "",
+      inabilityToWorkProof: "",
     }
   ]);
   
@@ -285,6 +360,17 @@ export function Registration() {
       professionalSituation: "",
       employerDetails: "",
       incomeType: [],
+      physicalDisabilities: [],
+      physicalOther: "",
+      physicalProofMedicalReport: "",
+      mentalDisabilities: [],
+      mentalOther: "",
+      mentalProofMedicalReport: "",
+      chronicIllness: [],
+      chronicOther: "",
+      chronicProofMedicalReport: "",
+      workingAbilityImplications: "",
+      inabilityToWorkProof: "",
     }]);
   };
 
@@ -366,6 +452,17 @@ export function Registration() {
         professionalSituation: m.professionalSituation || "",
         employerDetails: m.employerDetails || "",
         incomeType: m.incomeType ? (typeof m.incomeType === 'string' ? JSON.parse(m.incomeType) : m.incomeType) : [],
+        physicalDisabilities: [],
+        physicalOther: "",
+        physicalProofMedicalReport: "",
+        mentalDisabilities: [],
+        mentalOther: "",
+        mentalProofMedicalReport: "",
+        chronicIllness: [],
+        chronicOther: "",
+        chronicProofMedicalReport: "",
+        workingAbilityImplications: "",
+        inabilityToWorkProof: "",
       }));
       
       setMembers(newMembers);
@@ -1319,6 +1416,315 @@ export function Registration() {
                           </div>
                         </div>
                       )}
+                    </div>
+                    
+                    <Separator className="my-6" />
+                    
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-muted-foreground">Member Health Information</h4>
+                      
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="space-y-3">
+                          <Label>Known Physical Disabilities</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className="w-full justify-between font-normal"
+                                data-testid={`select-physical-disabilities-${index}`}
+                              >
+                                {member.physicalDisabilities.length > 0
+                                  ? `${member.physicalDisabilities.length} selected`
+                                  : "Select..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[400px] p-0" align="start">
+                              <ScrollArea className="h-[250px] p-4">
+                                <div className="space-y-2">
+                                  {PHYSICAL_DISABILITY_OPTIONS.map((option) => {
+                                    const isSelected = member.physicalDisabilities.includes(option.value);
+                                    return (
+                                      <div key={option.value} className="flex items-center space-x-2">
+                                        <Checkbox
+                                          id={`physical-${index}-${option.value}`}
+                                          checked={isSelected}
+                                          onCheckedChange={(checked) => {
+                                            const newMembers = [...members];
+                                            if (checked) {
+                                              if (option.value === "none") {
+                                                newMembers[index].physicalDisabilities = ["none"];
+                                              } else {
+                                                const filtered = newMembers[index].physicalDisabilities.filter(v => v !== "none");
+                                                newMembers[index].physicalDisabilities = [...filtered, option.value];
+                                              }
+                                            } else {
+                                              newMembers[index].physicalDisabilities = newMembers[index].physicalDisabilities.filter(v => v !== option.value);
+                                            }
+                                            setMembers(newMembers);
+                                          }}
+                                        />
+                                        <Label htmlFor={`physical-${index}-${option.value}`} className="text-sm font-normal cursor-pointer">
+                                          {option.label}
+                                        </Label>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </ScrollArea>
+                            </PopoverContent>
+                          </Popover>
+                          {member.physicalDisabilities.includes("other") && (
+                            <Input
+                              placeholder="Specify other physical disability..."
+                              value={member.physicalOther}
+                              onChange={(e) => {
+                                const newMembers = [...members];
+                                newMembers[index].physicalOther = e.target.value;
+                                setMembers(newMembers);
+                              }}
+                              data-testid={`input-physical-other-${index}`}
+                            />
+                          )}
+                          <div className="space-y-1">
+                            <Label className="text-xs">Proof/Medical Report</Label>
+                            <Select
+                              value={member.physicalProofMedicalReport}
+                              onValueChange={(value) => {
+                                const newMembers = [...members];
+                                newMembers[index].physicalProofMedicalReport = value;
+                                setMembers(newMembers);
+                              }}
+                            >
+                              <SelectTrigger data-testid={`select-physical-proof-${index}`}>
+                                <SelectValue placeholder="Select..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {PROOF_MEDICAL_REPORT_OPTIONS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <Label>Known Mental Disabilities</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className="w-full justify-between font-normal"
+                                data-testid={`select-mental-disabilities-${index}`}
+                              >
+                                {member.mentalDisabilities.length > 0
+                                  ? `${member.mentalDisabilities.length} selected`
+                                  : "Select..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[400px] p-0" align="start">
+                              <ScrollArea className="h-[200px] p-4">
+                                <div className="space-y-2">
+                                  {MENTAL_DISABILITY_OPTIONS.map((option) => {
+                                    const isSelected = member.mentalDisabilities.includes(option.value);
+                                    return (
+                                      <div key={option.value} className="flex items-center space-x-2">
+                                        <Checkbox
+                                          id={`mental-${index}-${option.value}`}
+                                          checked={isSelected}
+                                          onCheckedChange={(checked) => {
+                                            const newMembers = [...members];
+                                            if (checked) {
+                                              if (option.value === "none") {
+                                                newMembers[index].mentalDisabilities = ["none"];
+                                              } else {
+                                                const filtered = newMembers[index].mentalDisabilities.filter(v => v !== "none");
+                                                newMembers[index].mentalDisabilities = [...filtered, option.value];
+                                              }
+                                            } else {
+                                              newMembers[index].mentalDisabilities = newMembers[index].mentalDisabilities.filter(v => v !== option.value);
+                                            }
+                                            setMembers(newMembers);
+                                          }}
+                                        />
+                                        <Label htmlFor={`mental-${index}-${option.value}`} className="text-sm font-normal cursor-pointer">
+                                          {option.label}
+                                        </Label>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </ScrollArea>
+                            </PopoverContent>
+                          </Popover>
+                          {member.mentalDisabilities.includes("other") && (
+                            <Input
+                              placeholder="Specify other mental health condition..."
+                              value={member.mentalOther}
+                              onChange={(e) => {
+                                const newMembers = [...members];
+                                newMembers[index].mentalOther = e.target.value;
+                                setMembers(newMembers);
+                              }}
+                              data-testid={`input-mental-other-${index}`}
+                            />
+                          )}
+                          <div className="space-y-1">
+                            <Label className="text-xs">Proof/Medical Report</Label>
+                            <Select
+                              value={member.mentalProofMedicalReport}
+                              onValueChange={(value) => {
+                                const newMembers = [...members];
+                                newMembers[index].mentalProofMedicalReport = value;
+                                setMembers(newMembers);
+                              }}
+                            >
+                              <SelectTrigger data-testid={`select-mental-proof-${index}`}>
+                                <SelectValue placeholder="Select..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {PROOF_MEDICAL_REPORT_OPTIONS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <Label>Known Chronic Illness</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className="w-full justify-between font-normal"
+                                data-testid={`select-chronic-illness-${index}`}
+                              >
+                                {member.chronicIllness.length > 0
+                                  ? `${member.chronicIllness.length} selected`
+                                  : "Select..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[400px] p-0" align="start">
+                              <ScrollArea className="h-[250px] p-4">
+                                <div className="space-y-2">
+                                  {CHRONIC_ILLNESS_OPTIONS.map((option) => {
+                                    const isSelected = member.chronicIllness.includes(option.value);
+                                    return (
+                                      <div key={option.value} className="flex items-center space-x-2">
+                                        <Checkbox
+                                          id={`chronic-${index}-${option.value}`}
+                                          checked={isSelected}
+                                          onCheckedChange={(checked) => {
+                                            const newMembers = [...members];
+                                            if (checked) {
+                                              if (option.value === "none") {
+                                                newMembers[index].chronicIllness = ["none"];
+                                              } else {
+                                                const filtered = newMembers[index].chronicIllness.filter(v => v !== "none");
+                                                newMembers[index].chronicIllness = [...filtered, option.value];
+                                              }
+                                            } else {
+                                              newMembers[index].chronicIllness = newMembers[index].chronicIllness.filter(v => v !== option.value);
+                                            }
+                                            setMembers(newMembers);
+                                          }}
+                                        />
+                                        <Label htmlFor={`chronic-${index}-${option.value}`} className="text-sm font-normal cursor-pointer">
+                                          {option.label}
+                                        </Label>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </ScrollArea>
+                            </PopoverContent>
+                          </Popover>
+                          {member.chronicIllness.includes("other") && (
+                            <Input
+                              placeholder="Specify other chronic illness..."
+                              value={member.chronicOther}
+                              onChange={(e) => {
+                                const newMembers = [...members];
+                                newMembers[index].chronicOther = e.target.value;
+                                setMembers(newMembers);
+                              }}
+                              data-testid={`input-chronic-other-${index}`}
+                            />
+                          )}
+                          <div className="space-y-1">
+                            <Label className="text-xs">Proof/Medical Report</Label>
+                            <Select
+                              value={member.chronicProofMedicalReport}
+                              onValueChange={(value) => {
+                                const newMembers = [...members];
+                                newMembers[index].chronicProofMedicalReport = value;
+                                setMembers(newMembers);
+                              }}
+                            >
+                              <SelectTrigger data-testid={`select-chronic-proof-${index}`}>
+                                <SelectValue placeholder="Select..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {PROOF_MEDICAL_REPORT_OPTIONS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div className="space-y-2">
+                          <Label>Implications on Working Abilities</Label>
+                          <Select
+                            value={member.workingAbilityImplications}
+                            onValueChange={(value) => {
+                              const newMembers = [...members];
+                              newMembers[index].workingAbilityImplications = value;
+                              setMembers(newMembers);
+                            }}
+                          >
+                            <SelectTrigger data-testid={`select-working-ability-${index}`}>
+                              <SelectValue placeholder="Select..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {WORKING_ABILITY_OPTIONS.map(opt => (
+                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {member.workingAbilityImplications === "unable" && (
+                          <div className="space-y-2">
+                            <Label>Inability to Work Supported by Medical Proof</Label>
+                            <Select
+                              value={member.inabilityToWorkProof}
+                              onValueChange={(value) => {
+                                const newMembers = [...members];
+                                newMembers[index].inabilityToWorkProof = value;
+                                setMembers(newMembers);
+                              }}
+                            >
+                              <SelectTrigger data-testid={`select-inability-proof-${index}`}>
+                                <SelectValue placeholder="Select..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {INABILITY_PROOF_OPTIONS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
