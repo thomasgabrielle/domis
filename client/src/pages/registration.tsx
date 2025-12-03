@@ -59,6 +59,7 @@ type MemberForm = {
   chronicProofMedicalReport: string;
   workingAbilityImplications: string;
   inabilityToWorkProof: string;
+  narrativeSummary: string;
 };
 
 const CERTIFICATION_OPTIONS = [
@@ -231,6 +232,7 @@ export function Registration() {
       chronicProofMedicalReport: "",
       workingAbilityImplications: "",
       inabilityToWorkProof: "",
+      narrativeSummary: "",
     }
   ]);
   
@@ -371,6 +373,7 @@ export function Registration() {
       chronicProofMedicalReport: "",
       workingAbilityImplications: "",
       inabilityToWorkProof: "",
+      narrativeSummary: "",
     }]);
   };
 
@@ -463,6 +466,7 @@ export function Registration() {
         chronicProofMedicalReport: "",
         workingAbilityImplications: "",
         inabilityToWorkProof: "",
+        narrativeSummary: "",
       }));
       
       setMembers(newMembers);
@@ -1733,6 +1737,24 @@ export function Registration() {
                           </div>
                         )}
                       </div>
+                    </div>
+                    
+                    <Separator className="my-6" />
+                    
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-muted-foreground">Narrative Summary / Additional Comments</h4>
+                      <Textarea
+                        id={`narrativeSummary-${index}`}
+                        value={member.narrativeSummary}
+                        onChange={(e) => {
+                          const newMembers = [...members];
+                          newMembers[index].narrativeSummary = e.target.value;
+                          setMembers(newMembers);
+                        }}
+                        placeholder="Enter any additional notes, observations, or narrative summary about this member..."
+                        className="min-h-[120px]"
+                        data-testid={`input-narrative-summary-${index}`}
+                      />
                     </div>
                   </div>
                 ))}
