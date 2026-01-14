@@ -24,20 +24,18 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/">
-          <a className="flex items-center gap-2 group">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground shadow-lg">
-              <Building2 className="h-5 w-5" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-heading font-bold text-lg text-foreground leading-none">
-                PAP-MIS
-              </span>
-              <span className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
-                Public Assistance Program
-              </span>
-            </div>
-          </a>
+        <Link href="/" className="flex items-center gap-2 group">
+          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground shadow-lg">
+            <Building2 className="h-5 w-5" />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-heading font-bold text-lg text-foreground leading-none">
+              PAP-MIS
+            </span>
+            <span className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase">
+              Public Assistance Program
+            </span>
+          </div>
         </Link>
         
         {/* Desktop Nav */}
@@ -46,8 +44,7 @@ export function Navbar() {
             const Icon = item.icon;
             const isActive = location === item.href;
             return (
-              <Link key={item.href} href={item.href}>
-                <a className={cn(
+              <Link key={item.href} href={item.href} className={cn(
                   "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                   isActive 
                     ? "bg-primary/10 text-primary" 
@@ -55,7 +52,6 @@ export function Navbar() {
                 )}>
                   <Icon className="h-4 w-4" />
                   {item.label}
-                </a>
               </Link>
             );
           })}
@@ -89,19 +85,19 @@ export function Navbar() {
                   const Icon = item.icon;
                   const isActive = location === item.href;
                   return (
-                    <Link key={item.href} href={item.href}>
-                      <a 
-                        onClick={() => setIsOpen(false)}
-                        className={cn(
-                          "flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium transition-colors",
-                          isActive 
-                            ? "bg-primary/10 text-primary" 
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        <Icon className="h-5 w-5" />
-                        {item.label}
-                      </a>
+                    <Link 
+                      key={item.href} 
+                      href={item.href}
+                      onClick={() => setIsOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium transition-colors",
+                        isActive 
+                          ? "bg-primary/10 text-primary" 
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="h-5 w-5" />
+                      {item.label}
                     </Link>
                   );
                 })}
