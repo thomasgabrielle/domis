@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,6 +23,12 @@ export function ApplicationDetail() {
   
   const [assessmentNotes, setAssessmentNotes] = useState("");
   const [householdAssets, setHouseholdAssets] = useState("");
+  const [recommendation, setRecommendation] = useState("");
+  const [amountAllocation, setAmountAllocation] = useState("");
+  const [durationMonths, setDurationMonths] = useState("");
+  const [transferModality, setTransferModality] = useState("");
+  const [complementaryActivities, setComplementaryActivities] = useState("");
+  const [recommendationComments, setRecommendationComments] = useState("");
 
   const { data: allHouseholds = [] } = useQuery({
     queryKey: ['households'],
@@ -56,6 +63,12 @@ export function ApplicationDetail() {
     if (data?.household) {
       setAssessmentNotes(data.household.assessmentNotes || "");
       setHouseholdAssets(data.household.householdAssets || "");
+      setRecommendation(data.household.recommendation || "");
+      setAmountAllocation(data.household.amountAllocation || "");
+      setDurationMonths(data.household.durationMonths?.toString() || "");
+      setTransferModality(data.household.transferModality || "");
+      setComplementaryActivities(data.household.complementaryActivities || "");
+      setRecommendationComments(data.household.recommendationComments || "");
     }
   }, [data]);
 
@@ -65,6 +78,12 @@ export function ApplicationDetail() {
         household: {
           assessmentNotes,
           householdAssets,
+          recommendation,
+          amountAllocation: amountAllocation ? parseFloat(amountAllocation) : null,
+          durationMonths: durationMonths ? parseInt(durationMonths) : null,
+          transferModality,
+          complementaryActivities,
+          recommendationComments,
         },
         members: data?.members || [],
       });
@@ -836,6 +855,94 @@ export function ApplicationDetail() {
                   className="resize-y"
                   data-testid="input-assessment-notes"
                 />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Recommendations Sub-section */}
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">Recommendations</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="recommendation">Recommendation</Label>
+                  <Select value={recommendation} onValueChange={setRecommendation}>
+                    <SelectTrigger id="recommendation" data-testid="select-recommendation">
+                      <SelectValue placeholder="Select recommendation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="agree">Agree</SelectItem>
+                      <SelectItem value="disagree">Disagree</SelectItem>
+                      <SelectItem value="requires_further_info">Requires Further Information</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="amountAllocation">Amount Allocation ($)</Label>
+                  <Input
+                    id="amountAllocation"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Enter amount"
+                    value={amountAllocation}
+                    onChange={(e) => setAmountAllocation(e.target.value)}
+                    data-testid="input-amount-allocation"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="durationMonths">Duration (Months)</Label>
+                  <Input
+                    id="durationMonths"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="Enter duration in months"
+                    value={durationMonths}
+                    onChange={(e) => setDurationMonths(e.target.value)}
+                    data-testid="input-duration-months"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="transferModality">Financial Transfer Modality</Label>
+                  <Select value={transferModality} onValueChange={setTransferModality}>
+                    <SelectTrigger id="transferModality" data-testid="select-transfer-modality">
+                      <SelectValue placeholder="Select modality" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="phone">Phone (Mobile Money)</SelectItem>
+                      <SelectItem value="vcc">VCC (Virtual Credit Card)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="complementaryActivities">Complementary Activities</Label>
+                  <Textarea
+                    id="complementaryActivities"
+                    placeholder="Describe any complementary activities recommended for this household..."
+                    value={complementaryActivities}
+                    onChange={(e) => setComplementaryActivities(e.target.value)}
+                    rows={3}
+                    data-testid="input-complementary-activities"
+                  />
+                </div>
+                
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="recommendationComments">Comments</Label>
+                  <Textarea
+                    id="recommendationComments"
+                    placeholder="Any additional comments or notes regarding the recommendation..."
+                    value={recommendationComments}
+                    onChange={(e) => setRecommendationComments(e.target.value)}
+                    rows={3}
+                    data-testid="input-recommendation-comments"
+                  />
+                </div>
               </div>
             </div>
           </CardContent>

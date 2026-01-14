@@ -88,6 +88,14 @@ export const households = pgTable("households", {
   assessmentNotes: text("assessment_notes"),
   householdAssets: text("household_assets"),
   
+  // Recommendations
+  recommendation: text("recommendation"), // agree, disagree, requires_further_info
+  amountAllocation: numeric("amount_allocation", { precision: 10, scale: 2 }),
+  durationMonths: integer("duration_months"),
+  transferModality: text("transfer_modality"), // cash, phone, vcc
+  complementaryActivities: text("complementary_activities"),
+  recommendationComments: text("recommendation_comments"),
+  
   // Status
   programStatus: text("program_status").notNull().default("pending_assessment"),
   enrollmentDate: timestamp("enrollment_date"),
