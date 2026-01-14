@@ -650,6 +650,40 @@ export function ApplicationDetail() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Household Demographics */}
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">Household Demographics</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="border px-3 py-2 text-left font-semibold">Name</th>
+                      <th className="border px-3 py-2 text-left font-semibold">Sex</th>
+                      <th className="border px-3 py-2 text-left font-semibold">Age</th>
+                      <th className="border px-3 py-2 text-left font-semibold">Relationship</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {members?.map((member: any) => {
+                      const age = member.dateOfBirth 
+                        ? Math.floor((new Date().getTime() - new Date(member.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+                        : '—';
+                      return (
+                        <tr key={member.id} className="hover:bg-muted/30">
+                          <td className="border px-3 py-2">{member.firstName} {member.lastName}</td>
+                          <td className="border px-3 py-2 capitalize">{member.gender}</td>
+                          <td className="border px-3 py-2">{age}</td>
+                          <td className="border px-3 py-2 capitalize">{member.relationshipToHead?.replace(/_/g, ' ') || '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <Separator />
+
             {/* Summary Sub-section */}
             <div>
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">Summary</h3>
