@@ -19,6 +19,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   const sidebarItems = [
     { href: "/admin/users", label: "User Management", icon: Users },
+    { href: "/admin/roles", label: "Roles & Permissions", icon: Shield },
     { href: "/admin/programs", label: "Programs & Activities", icon: LayoutTemplate },
     { href: "/admin/settings", label: "System Settings", icon: Settings },
     { href: "/admin/forms", label: "Form Builder", icon: FileText },

@@ -21,6 +21,7 @@ import { AdminSettings } from "@/pages/admin/settings";
 import { AdminForms } from "@/pages/admin/forms";
 import { AdminBITools } from "@/pages/admin/bi-tools";
 import { AdminInterop } from "@/pages/admin/interop";
+import { AdminRoles } from "@/pages/admin/roles";
 
 function Router() {
   return (
@@ -39,6 +40,7 @@ function Router() {
       
       {/* Admin Routes */}
       <Route path="/admin/users" component={AdminUsers} />
+      <Route path="/admin/roles" component={AdminRoles} />
       <Route path="/admin/programs" component={AdminPrograms} />
       <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/admin/forms" component={AdminForms} />
