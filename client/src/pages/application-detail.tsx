@@ -281,6 +281,61 @@ export function ApplicationDetail() {
           )}
         </div>
 
+        {/* Primary Applicant Highlight */}
+        {(() => {
+          const headOfHousehold = members?.find((m: any) => m.relationshipToHead === 'head' || m.isHead);
+          if (!headOfHousehold) return null;
+          const age = headOfHousehold.dateOfBirth 
+            ? Math.floor((new Date().getTime() - new Date(headOfHousehold.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+            : null;
+          return (
+            <Card className="border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10" data-testid="card-primary-applicant">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center text-2xl font-bold text-primary shrink-0">
+                    {headOfHousehold.firstName?.charAt(0)}{headOfHousehold.lastName?.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge className="bg-primary text-primary-foreground">Primary Applicant</Badge>
+                      {headOfHousehold.disabilityStatus && (
+                        <Badge variant="outline" className="border-amber-500 text-amber-600">Has Disability</Badge>
+                      )}
+                    </div>
+                    <h2 className="text-2xl font-bold text-foreground" data-testid="text-applicant-name">
+                      {headOfHousehold.firstName} {headOfHousehold.lastName}
+                    </h2>
+                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">Age:</span> {age || '—'}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">Sex:</span> <span className="capitalize">{headOfHousehold.gender}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">National ID:</span> 
+                        <span className="font-mono">{headOfHousehold.nationalId || '—'}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">Marital Status:</span> 
+                        <span className="capitalize">{headOfHousehold.maritalStatus || '—'}</span>
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-4 mt-1 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">Location:</span> {household.village}, {household.district}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">Household Size:</span> {members?.length || 0} member(s)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
         {/* Related Applications Navigation */}
         {relatedApplications.length > 0 && (
           <Card className="border-primary/20 bg-primary/5">
