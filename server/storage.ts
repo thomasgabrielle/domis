@@ -29,6 +29,9 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
+  updateUser(id: string, user: Partial<InsertUser>): Promise<User>;
+  deleteUser(id: string): Promise<void>;
+  getUsersWithRoles(): Promise<(User & { roleData?: Role })[]>;
   
   // Households
   createHousehold(household: InsertHousehold, members: InsertHouseholdMember[]): Promise<Household>;
@@ -115,6 +118,32 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
+  }
+
+  async updateUser(id: string, userData: Partial<InsertUser>): Promise<User> {
+    const result = await db.update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
+  async getUsersWithRoles(): Promise<(User & { roleData?: Role })[]> {
+    const result = await db.select({
+      user: users,
+      role: roles
+    })
+    .from(users)
+    .leftJoin(roles, eq(users.roleId, roles.id));
+    
+    return result.map(r => ({
+      ...r.user,
+      roleData: r.role || undefined
+    }));
   }
 
   // Households

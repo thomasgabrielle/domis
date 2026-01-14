@@ -8,7 +8,8 @@ import {
   insertGrievanceSchema,
   insertPaymentSchema,
   insertCaseActivitySchema,
-  insertRoleSchema
+  insertRoleSchema,
+  insertUserSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -310,6 +311,70 @@ export async function registerRoutes(
     try {
       const activities = await storage.getCaseActivitiesForHousehold(req.params.householdId);
       res.json(activities);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ===== USERS =====
+  
+  // Get all users with roles
+  app.get("/api/users", async (req, res) => {
+    try {
+      const users = await storage.getUsersWithRoles();
+      res.json(users);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single user
+  app.get("/api/users/:id", async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create user
+  app.post("/api/users", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      const user = await storage.createUser(userData);
+      res.json(user);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update user
+  app.patch("/api/users/:id", async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const updatedUser = await storage.updateUser(req.params.id, req.body);
+      res.json(updatedUser);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete user
+  app.delete("/api/users/:id", async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      await storage.deleteUser(req.params.id);
+      res.json({ message: "User deleted" });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
