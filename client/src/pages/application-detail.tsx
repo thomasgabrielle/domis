@@ -595,7 +595,23 @@ export function ApplicationDetail() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Income Type</p>
-                      <p className="font-medium capitalize">{member.incomeType?.replace(/_/g, ' ') || '—'}</p>
+                      <p className="font-medium">
+                        {member.incomeType 
+                          ? (() => {
+                              try {
+                                const incomes = JSON.parse(member.incomeType);
+                                if (Array.isArray(incomes) && incomes.length > 0) {
+                                  return incomes.map((inc: any) => 
+                                    `${inc.type?.replace(/_/g, ' ')} ($${inc.monthlyAmount || 0})`
+                                  ).join(', ');
+                                }
+                                return member.incomeType.replace(/_/g, ' ');
+                              } catch {
+                                return member.incomeType.replace(/_/g, ' ');
+                              }
+                            })()
+                          : '—'}
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Monthly Income</p>
