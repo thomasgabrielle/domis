@@ -485,30 +485,87 @@ export function ApplicationDetail() {
                     {member.relationshipToHead === 'head' ? 'Head of Household' : `Member #${index + 1}`}
                   </h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Full Name</p>
-                    <p className="font-medium">{member.firstName} {member.lastName}</p>
+                
+                {/* Basic Information */}
+                <div className="mb-4">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">Personal Details</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Full Name</p>
+                      <p className="font-medium">{member.firstName} {member.lastName}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Date of Birth</p>
+                      <p className="font-medium">{formatDate(member.dateOfBirth)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Gender</p>
+                      <p className="font-medium capitalize">{member.gender}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Relationship to Head</p>
+                      <p className="font-medium">{formatRelationship(member.relationshipToHead)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">National ID</p>
+                      <p className="font-medium font-mono">{member.nationalId || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Marital Status</p>
+                      <p className="font-medium capitalize">{member.maritalStatus || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Disability Status</p>
+                      <p className="font-medium">{member.disabilityStatus ? 'Yes' : 'No'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Date of Birth</p>
-                    <p className="font-medium">{formatDate(member.dateOfBirth)}</p>
+                </div>
+
+                {/* Education Information */}
+                <div className="mb-4">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">Education</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Education Level</p>
+                      <p className="font-medium capitalize">{member.educationLevel?.replace(/_/g, ' ') || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Current Enrollment</p>
+                      <p className="font-medium capitalize">{member.currentEducationEnrolment?.replace(/_/g, ' ') || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Professional Certifications</p>
+                      <p className="font-medium">{member.professionalCertifications?.replace(/_/g, ' ') || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Ongoing Certification</p>
+                      <p className="font-medium">{member.ongoingCertification || '—'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Gender</p>
-                    <p className="font-medium capitalize">{member.gender}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Relationship to Head</p>
-                    <p className="font-medium">{formatRelationship(member.relationshipToHead)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">National ID</p>
-                    <p className="font-medium font-mono">{member.nationalId || '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Disability Status</p>
-                    <p className="font-medium">{member.disabilityStatus ? 'Yes' : 'No'}</p>
+                </div>
+
+                {/* Employment & Income */}
+                <div className="mb-4">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">Employment & Income</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Professional Situation</p>
+                      <p className="font-medium capitalize">{member.professionalSituation?.replace(/_/g, ' ') || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Employer Details</p>
+                      <p className="font-medium">{member.employerDetails || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Income Type</p>
+                      <p className="font-medium capitalize">{member.incomeType?.replace(/_/g, ' ') || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Monthly Income</p>
+                      <p className="font-medium">
+                        {member.monthlyIncome ? `$${parseFloat(member.monthlyIncome).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
