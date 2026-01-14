@@ -212,6 +212,8 @@ export class DatabaseStorage implements IStorage {
     if (householdData.requestPurpose !== undefined) updateData.requestPurpose = householdData.requestPurpose || null;
     if (householdData.actionTaken !== undefined) updateData.actionTaken = householdData.actionTaken || null;
     if (householdData.followUpNotes !== undefined) updateData.followUpNotes = householdData.followUpNotes || null;
+    if (householdData.assessmentNotes !== undefined) updateData.assessmentNotes = householdData.assessmentNotes || null;
+    if (householdData.householdAssets !== undefined) updateData.householdAssets = householdData.householdAssets || null;
     
     if (householdData.proxyFirstName !== undefined) updateData.proxyFirstName = householdData.proxyFirstName || null;
     if (householdData.proxyLastName !== undefined) updateData.proxyLastName = householdData.proxyLastName || null;

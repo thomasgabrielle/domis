@@ -3,14 +3,25 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Pencil, ClipboardCheck, Save, Loader2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
+import { useState, useEffect } from "react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export function ApplicationDetail() {
   const [, setLocation] = useLocation();
   const params = useParams<{ id: string }>();
   const householdId = params.id;
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [assessmentNotes, setAssessmentNotes] = useState("");
+  const [householdAssets, setHouseholdAssets] = useState("");
 
   const { data: allHouseholds = [] } = useQuery({
     queryKey: ['households'],
@@ -41,10 +52,44 @@ export function ApplicationDetail() {
     enabled: !!householdId,
   });
 
+  useEffect(() => {
+    if (data?.household) {
+      setAssessmentNotes(data.household.assessmentNotes || "");
+      setHouseholdAssets(data.household.householdAssets || "");
+    }
+  }, [data]);
+
+  const saveAssessmentMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PUT", `/api/households/${householdId}`, {
+        household: {
+          assessmentNotes,
+          householdAssets,
+        },
+        members: data?.members || [],
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Assessment saved", description: "Your assessment notes have been saved." });
+      queryClient.invalidateQueries({ queryKey: ['household', householdId] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const currentIndex = allHouseholds.findIndex((h: any) => h.id === householdId);
   const totalApplications = allHouseholds.length;
   const hasPrevious = currentIndex > 0;
   const hasNext = currentIndex < totalApplications - 1;
+
+  const calculateTotalIncome = () => {
+    if (!data?.members) return 0;
+    return data.members.reduce((total: number, member: any) => {
+      const income = parseFloat(member.monthlyIncome) || 0;
+      return total + income;
+    }, 0);
+  };
 
   const goToPrevious = () => {
     if (hasPrevious) {
@@ -468,6 +513,85 @@ export function ApplicationDetail() {
                 </div>
               </div>
             ))}
+          </CardContent>
+        </Card>
+
+        {/* Assessment Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5 text-primary" />
+                <CardTitle>Assessment</CardTitle>
+              </div>
+              <Button
+                onClick={() => saveAssessmentMutation.mutate()}
+                disabled={saveAssessmentMutation.isPending}
+                className="gap-2"
+                data-testid="button-save-assessment"
+              >
+                {saveAssessmentMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Save Assessment
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Summary Sub-section */}
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">Summary</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
+                <div>
+                  <p className="text-sm text-muted-foreground">Number of Household Members</p>
+                  <p className="text-2xl font-bold text-primary">{members?.length || 0}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Household Income</p>
+                  <p className="text-2xl font-bold text-primary">
+                    ${calculateTotalIncome().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">per month</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Vulnerability Score</p>
+                  <p className="text-2xl font-bold text-primary">{household.vulnerabilityScore || 0}</p>
+                </div>
+              </div>
+              
+              <div className="mt-4 space-y-2">
+                <Label htmlFor="householdAssets">Household Assets</Label>
+                <Textarea
+                  id="householdAssets"
+                  placeholder="List household assets (e.g., property, vehicles, livestock, savings...)"
+                  value={householdAssets}
+                  onChange={(e) => setHouseholdAssets(e.target.value)}
+                  rows={3}
+                  data-testid="input-household-assets"
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Assessment Notes Sub-section */}
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">Assessment Notes</h3>
+              <div className="space-y-2">
+                <Label htmlFor="assessmentNotes">Write your assessment of this application</Label>
+                <Textarea
+                  id="assessmentNotes"
+                  placeholder="Enter your assessment, observations, and recommendations for this application..."
+                  value={assessmentNotes}
+                  onChange={(e) => setAssessmentNotes(e.target.value)}
+                  rows={6}
+                  className="resize-y"
+                  data-testid="input-assessment-notes"
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
 

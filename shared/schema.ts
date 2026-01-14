@@ -80,6 +80,8 @@ export const households = pgTable("households", {
   // Assessment
   vulnerabilityScore: integer("vulnerability_score").default(0),
   lastAssessmentDate: timestamp("last_assessment_date"),
+  assessmentNotes: text("assessment_notes"),
+  householdAssets: text("household_assets"),
   
   // Status
   programStatus: text("program_status").notNull().default("pending_assessment"),
@@ -115,6 +117,7 @@ export const householdMembers = pgTable("household_members", {
   professionalSituation: text("professional_situation"),
   employerDetails: text("employer_details"),
   incomeType: text("income_type"),
+  monthlyIncome: numeric("monthly_income", { precision: 10, scale: 2 }),
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
