@@ -77,6 +77,11 @@ export const households = pgTable("households", {
   village: text("village").notNull(),
   gpsCoordinates: text("gps_coordinates"),
   
+  // Household Details
+  roofType: text("roof_type"),
+  wallType: text("wall_type"),
+  householdAssetsList: text("household_assets_list"),
+  
   // Assessment
   vulnerabilityScore: integer("vulnerability_score").default(0),
   lastAssessmentDate: timestamp("last_assessment_date"),

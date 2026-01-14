@@ -465,6 +465,43 @@ export function ApplicationDetail() {
           </CardContent>
         </Card>
 
+        {/* Household Details */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              <CardTitle>Household Details</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Roof Type</p>
+              <p className="font-medium capitalize">{household.roofType || '—'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Wall Type</p>
+              <p className="font-medium capitalize">{household.wallType || '—'}</p>
+            </div>
+            <div className="md:col-span-2">
+              <p className="text-sm text-muted-foreground">Household Assets</p>
+              <p className="font-medium">
+                {household.householdAssetsList 
+                  ? (() => {
+                      try {
+                        const assets = JSON.parse(household.householdAssetsList);
+                        return assets.map((a: string) => a.replace(/_/g, ' ')).map((a: string) => 
+                          a.charAt(0).toUpperCase() + a.slice(1)
+                        ).join(', ');
+                      } catch {
+                        return household.householdAssetsList;
+                      }
+                    })()
+                  : '—'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Applicant Information */}
         <Card>
           <CardHeader>

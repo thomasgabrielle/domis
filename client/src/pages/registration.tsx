@@ -200,6 +200,36 @@ type LocationForm = {
   gpsCoordinates: string;
 };
 
+type HouseholdDetailsForm = {
+  roofType: string;
+  wallType: string;
+  householdAssetsList: string[];
+};
+
+const ROOF_TYPE_OPTIONS = [
+  { value: "metal", label: "Metal" },
+  { value: "tile", label: "Tile" },
+  { value: "cement", label: "Cement" },
+  { value: "wood", label: "Wood" },
+];
+
+const WALL_TYPE_OPTIONS = [
+  { value: "wood", label: "Wood" },
+  { value: "cement", label: "Cement" },
+  { value: "pile", label: "Pile" },
+  { value: "metal", label: "Metal" },
+  { value: "other", label: "Other" },
+];
+
+const HOUSEHOLD_ASSETS_OPTIONS = [
+  { value: "car", label: "Car" },
+  { value: "television", label: "Television" },
+  { value: "refrigerator", label: "Refrigerator" },
+  { value: "microwave", label: "Microwave" },
+  { value: "air_conditioning", label: "Air Conditioning" },
+  { value: "other", label: "Other Household Assets" },
+];
+
 export function Registration() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -241,6 +271,12 @@ export function Registration() {
     district: "",
     village: "",
     gpsCoordinates: "",
+  });
+  
+  const [householdDetails, setHouseholdDetails] = useState<HouseholdDetailsForm>({
+    roofType: "",
+    wallType: "",
+    householdAssetsList: [],
   });
   
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
@@ -317,6 +353,9 @@ export function Registration() {
       proxyReason: formData.get("proxyReason") as string || null,
       proxyRelationship: formData.get("proxyRelationship") as string || null,
       proxyRole: formData.get("proxyRole") as string || null,
+      roofType: householdDetails.roofType || null,
+      wallType: householdDetails.wallType || null,
+      householdAssetsList: householdDetails.householdAssetsList.length > 0 ? JSON.stringify(householdDetails.householdAssetsList) : null,
       programStatus: "pending_assessment",
     };
 
@@ -751,6 +790,81 @@ export function Registration() {
                     <Button type="button" variant="outline" size="icon" title="Get Current Location" data-testid="button-gps">
                       <MapPin className="h-4 w-4" />
                     </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Household Details Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <CardTitle>Household Details</CardTitle>
+                </div>
+                <CardDescription>Information about the dwelling structure and assets.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="roofType">Roof Type</Label>
+                  <Select 
+                    name="roofType"
+                    value={householdDetails.roofType}
+                    onValueChange={(value) => setHouseholdDetails(prev => ({ ...prev, roofType: value }))}
+                  >
+                    <SelectTrigger id="roofType" data-testid="select-roof-type">
+                      <SelectValue placeholder="Select roof type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROOF_TYPE_OPTIONS.map(option => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="wallType">Wall Type</Label>
+                  <Select 
+                    name="wallType"
+                    value={householdDetails.wallType}
+                    onValueChange={(value) => setHouseholdDetails(prev => ({ ...prev, wallType: value }))}
+                  >
+                    <SelectTrigger id="wallType" data-testid="select-wall-type">
+                      <SelectValue placeholder="Select wall type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WALL_TYPE_OPTIONS.map(option => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-3 md:col-span-2">
+                  <Label>Household Assets</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {HOUSEHOLD_ASSETS_OPTIONS.map(option => (
+                      <div key={option.value} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`asset-${option.value}`}
+                          checked={householdDetails.householdAssetsList.includes(option.value)}
+                          onCheckedChange={(checked) => {
+                            setHouseholdDetails(prev => ({
+                              ...prev,
+                              householdAssetsList: checked 
+                                ? [...prev.householdAssetsList, option.value]
+                                : prev.householdAssetsList.filter(v => v !== option.value)
+                            }));
+                          }}
+                          data-testid={`checkbox-asset-${option.value}`}
+                        />
+                        <Label 
+                          htmlFor={`asset-${option.value}`}
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          {option.label}
+                        </Label>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </CardContent>
