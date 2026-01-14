@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ArrowLeft, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Pencil, AlertTriangle, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 
@@ -26,6 +27,16 @@ export function ApplicationDetail() {
     queryFn: async () => {
       const response = await fetch(`/api/households/${householdId}`);
       if (!response.ok) throw new Error('Failed to fetch application');
+      return response.json();
+    },
+    enabled: !!householdId,
+  });
+
+  const { data: relatedApplications = [] } = useQuery({
+    queryKey: ['related-applications', householdId],
+    queryFn: async () => {
+      const response = await fetch(`/api/households/${householdId}/related-applications`);
+      if (!response.ok) throw new Error('Failed to fetch related applications');
       return response.json();
     },
     enabled: !!householdId,
@@ -225,6 +236,53 @@ export function ApplicationDetail() {
             </div>
           )}
         </div>
+
+        {/* Related Applications Alert */}
+        {relatedApplications.length > 0 && (
+          <Alert variant="destructive" className="bg-amber-50 border-amber-300 text-amber-900">
+            <AlertTriangle className="h-5 w-5 text-amber-600" />
+            <AlertTitle className="text-amber-900 font-semibold">Other Applications Found</AlertTitle>
+            <AlertDescription className="text-amber-800">
+              <p className="mb-3">
+                {relatedApplications.length === 1 
+                  ? 'A household member appears in another application:'
+                  : `Household members appear in ${relatedApplications.length} other applications:`}
+              </p>
+              <div className="space-y-2">
+                {relatedApplications.map((related: any) => (
+                  <div 
+                    key={related.household.id} 
+                    className="flex items-center justify-between bg-white/60 rounded-md px-3 py-2 border border-amber-200"
+                    data-testid={`related-app-${related.household.id}`}
+                  >
+                    <div>
+                      <span className="font-mono font-medium text-sm">
+                        {related.household.applicationId || related.household.householdCode}
+                      </span>
+                      <span className="mx-2 text-amber-600">•</span>
+                      <span className="text-sm">
+                        {related.matchingMembers.map((m: any) => `${m.firstName} ${m.lastName}`).join(', ')}
+                      </span>
+                      <span className="mx-2 text-amber-600">•</span>
+                      <Badge variant="outline" className="text-xs bg-white">
+                        {related.household.programStatus?.replace(/_/g, ' ')}
+                      </Badge>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1 text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+                      onClick={() => setLocation(`/application/${related.household.id}`)}
+                      data-testid={`view-related-${related.household.id}`}
+                    >
+                      View <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Intake Information */}
         <Card>

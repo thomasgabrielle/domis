@@ -128,6 +128,54 @@ export async function registerRoutes(
     }
   });
 
+  // Get related applications for a household (other applications by same members)
+  app.get("/api/households/:id/related-applications", async (req, res) => {
+    try {
+      const householdId = req.params.id;
+      const currentHousehold = await storage.getHouseholdWithMembers(householdId);
+      if (!currentHousehold) {
+        return res.status(404).json({ error: "Household not found" });
+      }
+      
+      const nationalIds = currentHousehold.members
+        .filter(m => m.nationalId)
+        .map(m => m.nationalId!.trim().toUpperCase());
+      
+      if (nationalIds.length === 0) {
+        return res.json([]);
+      }
+      
+      const allHouseholds = await storage.getAllHouseholds();
+      const relatedApplications: any[] = [];
+      
+      for (const household of allHouseholds) {
+        if (household.id === householdId) continue;
+        
+        const members = await storage.getHouseholdMembers(household.id);
+        const matchingMembers = members.filter(m => 
+          m.nationalId && nationalIds.includes(m.nationalId.trim().toUpperCase())
+        );
+        
+        if (matchingMembers.length > 0) {
+          relatedApplications.push({
+            household,
+            matchingMembers: matchingMembers.map(m => ({
+              id: m.id,
+              firstName: m.firstName,
+              lastName: m.lastName,
+              nationalId: m.nationalId,
+              relationshipToHead: m.relationshipToHead,
+            })),
+          });
+        }
+      }
+      
+      res.json(relatedApplications);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ===== REGISTRY LOOKUP =====
   
   // Check for duplicate National ID
