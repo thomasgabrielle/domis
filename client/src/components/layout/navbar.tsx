@@ -14,7 +14,7 @@ export function Navbar() {
     { href: "/registration", label: "Intake", icon: Users },
     { href: "/worksheet", label: "Applications", icon: FileSpreadsheet },
     { href: "/assessments", label: "Assessments", icon: ClipboardCheck },
-    { href: "/registry", label: "Registry", icon: BookUser },
+    { href: "/registry", label: "Clients", icon: BookUser },
     { href: "/cases", label: "Case Mgmt", icon: Briefcase },
     { href: "/payments", label: "Payments", icon: CreditCard },
     { href: "/grievances", label: "Grievances", icon: AlertCircle },
