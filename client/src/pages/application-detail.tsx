@@ -670,12 +670,52 @@ export function ApplicationDetail() {
                   <p className="text-2xl font-bold text-primary">{household.vulnerabilityScore || 0}</p>
                 </div>
               </div>
+
+              {/* Household Assets from Intake */}
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-muted/30 rounded-lg">
+                  <p className="text-sm font-semibold text-muted-foreground mb-2">Household Assets (from Intake)</p>
+                  <p className="font-medium">
+                    {household.householdAssetsList 
+                      ? (() => {
+                          try {
+                            const assets = JSON.parse(household.householdAssetsList);
+                            if (Array.isArray(assets) && assets.length > 0) {
+                              return assets.map((a: string) => 
+                                a.replace(/_/g, ' ').charAt(0).toUpperCase() + a.replace(/_/g, ' ').slice(1)
+                              ).join(', ');
+                            }
+                            return 'None listed';
+                          } catch {
+                            return household.householdAssetsList;
+                          }
+                        })()
+                      : 'None listed'}
+                  </p>
+                </div>
+                <div className="p-4 bg-muted/30 rounded-lg">
+                  <p className="text-sm font-semibold text-muted-foreground mb-2">Disability / Chronic Illness</p>
+                  <p className="font-medium">
+                    {(() => {
+                      const disabledMembers = members?.filter((m: any) => m.disabilityStatus) || [];
+                      if (disabledMembers.length > 0) {
+                        return (
+                          <span className="text-amber-600">
+                            Yes - {disabledMembers.length} member(s) with disability
+                          </span>
+                        );
+                      }
+                      return <span className="text-green-600">No members with disability reported</span>;
+                    })()}
+                  </p>
+                </div>
+              </div>
               
               <div className="mt-4 space-y-2">
-                <Label htmlFor="householdAssets">Household Assets</Label>
+                <Label htmlFor="householdAssets">Additional Assets Notes</Label>
                 <Textarea
                   id="householdAssets"
-                  placeholder="List household assets (e.g., property, vehicles, livestock, savings...)"
+                  placeholder="Add notes about additional household assets (e.g., property, vehicles, livestock, savings...)"
                   value={householdAssets}
                   onChange={(e) => setHouseholdAssets(e.target.value)}
                   rows={3}
