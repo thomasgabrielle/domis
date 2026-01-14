@@ -211,7 +211,14 @@ export function ApplicationDetail() {
     );
   }
 
-  const { household, members } = data;
+  const { household, members: rawMembers } = data;
+  
+  // Sort members consistently: head of household first, then by id for stable ordering
+  const members = rawMembers?.slice().sort((a: any, b: any) => {
+    if (a.relationshipToHead === 'head') return -1;
+    if (b.relationshipToHead === 'head') return 1;
+    return (a.id || '').localeCompare(b.id || '');
+  });
 
   return (
     <div className="min-h-screen bg-background font-sans pb-12">
