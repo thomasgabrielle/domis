@@ -7,7 +7,8 @@ import {
   insertAssessmentSchema,
   insertGrievanceSchema,
   insertPaymentSchema,
-  insertCaseActivitySchema
+  insertCaseActivitySchema,
+  insertRoleSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -309,6 +310,123 @@ export async function registerRoutes(
     try {
       const activities = await storage.getCaseActivitiesForHousehold(req.params.householdId);
       res.json(activities);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ===== ROLES & PERMISSIONS =====
+  
+  // Seed roles and permissions (call once to initialize)
+  app.post("/api/admin/seed-roles", async (req, res) => {
+    try {
+      await storage.seedRolesAndPermissions();
+      const roles = await storage.getAllRoles();
+      res.json({ message: "Roles and permissions seeded successfully", roles });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all roles
+  app.get("/api/roles", async (req, res) => {
+    try {
+      const roles = await storage.getAllRoles();
+      res.json(roles);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single role with permissions
+  app.get("/api/roles/:id", async (req, res) => {
+    try {
+      const role = await storage.getRole(req.params.id);
+      if (!role) {
+        return res.status(404).json({ error: "Role not found" });
+      }
+      const permissions = await storage.getRolePermissions(req.params.id);
+      res.json({ ...role, permissions });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create role
+  app.post("/api/roles", async (req, res) => {
+    try {
+      const roleData = insertRoleSchema.parse(req.body);
+      const role = await storage.createRole(roleData);
+      res.json(role);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update role
+  app.patch("/api/roles/:id", async (req, res) => {
+    try {
+      const role = await storage.getRole(req.params.id);
+      if (!role) {
+        return res.status(404).json({ error: "Role not found" });
+      }
+      if (role.isSystemRole) {
+        return res.status(403).json({ error: "Cannot modify system roles" });
+      }
+      const updatedRole = await storage.updateRole(req.params.id, req.body);
+      res.json(updatedRole);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete role
+  app.delete("/api/roles/:id", async (req, res) => {
+    try {
+      const role = await storage.getRole(req.params.id);
+      if (!role) {
+        return res.status(404).json({ error: "Role not found" });
+      }
+      if (role.isSystemRole) {
+        return res.status(403).json({ error: "Cannot delete system roles" });
+      }
+      await storage.deleteRole(req.params.id);
+      res.json({ message: "Role deleted" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all permissions
+  app.get("/api/permissions", async (req, res) => {
+    try {
+      const permissions = await storage.getAllPermissions();
+      res.json(permissions);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Set role permissions
+  app.put("/api/roles/:id/permissions", async (req, res) => {
+    try {
+      const { permissionIds } = req.body;
+      if (!Array.isArray(permissionIds)) {
+        return res.status(400).json({ error: "permissionIds must be an array" });
+      }
+      await storage.setRolePermissions(req.params.id, permissionIds);
+      const permissions = await storage.getRolePermissions(req.params.id);
+      res.json(permissions);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get role permissions
+  app.get("/api/roles/:id/permissions", async (req, res) => {
+    try {
+      const permissions = await storage.getRolePermissions(req.params.id);
+      res.json(permissions);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

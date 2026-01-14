@@ -3,12 +3,39 @@ import { pgTable, text, varchar, integer, timestamp, boolean, numeric, jsonb } f
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const roles = pgTable("roles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  isSystemRole: boolean("is_system_role").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const permissions = pgTable("permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  module: text("module").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const rolePermissions = pgTable("role_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  roleId: varchar("role_id").references(() => roles.id, { onDelete: "cascade" }).notNull(),
+  permissionId: varchar("permission_id").references(() => permissions.id, { onDelete: "cascade" }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   fullName: text("full_name").notNull(),
   email: text("email").notNull(),
+  roleId: varchar("role_id").references(() => roles.id),
   role: text("role").notNull().default("case_worker"),
   department: text("department"),
   status: text("status").notNull().default("active"),
@@ -191,6 +218,22 @@ export const caseActivities = pgTable("case_activities", {
 });
 
 // Insert Schemas
+export const insertRoleSchema = createInsertSchema(roles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPermissionSchema = createInsertSchema(permissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRolePermissionSchema = createInsertSchema(rolePermissions).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -270,3 +313,12 @@ export type Program = typeof programs.$inferSelect;
 
 export type InsertCaseActivity = z.infer<typeof insertCaseActivitySchema>;
 export type CaseActivity = typeof caseActivities.$inferSelect;
+
+export type InsertRole = z.infer<typeof insertRoleSchema>;
+export type Role = typeof roles.$inferSelect;
+
+export type InsertPermission = z.infer<typeof insertPermissionSchema>;
+export type Permission = typeof permissions.$inferSelect;
+
+export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
+export type RolePermission = typeof rolePermissions.$inferSelect;

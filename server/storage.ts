@@ -4,7 +4,7 @@ import ws from "ws";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { 
   users, households, householdMembers, assessments, grievances, 
-  payments, programs, caseActivities,
+  payments, programs, caseActivities, roles, permissions, rolePermissions,
   type User, type InsertUser,
   type Household, type InsertHousehold,
   type HouseholdMember, type InsertHouseholdMember,
@@ -13,6 +13,9 @@ import {
   type Payment, type InsertPayment,
   type Program, type InsertProgram,
   type CaseActivity, type InsertCaseActivity,
+  type Role, type InsertRole,
+  type Permission, type InsertPermission,
+  type RolePermission, type InsertRolePermission,
 } from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
@@ -68,6 +71,29 @@ export interface IStorage {
   
   // Registry lookup
   findMemberByNationalId(nationalId: string): Promise<{ member: HouseholdMember; household: Household; allMembers: HouseholdMember[] } | undefined>;
+  
+  // Roles
+  createRole(role: InsertRole): Promise<Role>;
+  getRole(id: string): Promise<Role | undefined>;
+  getRoleByName(name: string): Promise<Role | undefined>;
+  getAllRoles(): Promise<Role[]>;
+  updateRole(id: string, role: Partial<InsertRole>): Promise<Role>;
+  deleteRole(id: string): Promise<void>;
+  
+  // Permissions
+  createPermission(permission: InsertPermission): Promise<Permission>;
+  getPermission(id: string): Promise<Permission | undefined>;
+  getAllPermissions(): Promise<Permission[]>;
+  getPermissionsByModule(module: string): Promise<Permission[]>;
+  
+  // Role Permissions
+  assignPermissionToRole(roleId: string, permissionId: string): Promise<RolePermission>;
+  removePermissionFromRole(roleId: string, permissionId: string): Promise<void>;
+  getRolePermissions(roleId: string): Promise<Permission[]>;
+  setRolePermissions(roleId: string, permissionIds: string[]): Promise<void>;
+  
+  // Seed data
+  seedRolesAndPermissions(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -355,6 +381,186 @@ export class DatabaseStorage implements IStorage {
       household: result[0].household,
       allMembers
     };
+  }
+
+  // Roles
+  async createRole(insertRole: InsertRole): Promise<Role> {
+    const result = await db.insert(roles).values(insertRole).returning();
+    return result[0];
+  }
+
+  async getRole(id: string): Promise<Role | undefined> {
+    const result = await db.select().from(roles).where(eq(roles.id, id));
+    return result[0];
+  }
+
+  async getRoleByName(name: string): Promise<Role | undefined> {
+    const result = await db.select().from(roles).where(eq(roles.name, name));
+    return result[0];
+  }
+
+  async getAllRoles(): Promise<Role[]> {
+    return await db.select().from(roles).orderBy(roles.displayName);
+  }
+
+  async updateRole(id: string, roleData: Partial<InsertRole>): Promise<Role> {
+    const result = await db.update(roles)
+      .set({ ...roleData, updatedAt: new Date() })
+      .where(eq(roles.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteRole(id: string): Promise<void> {
+    await db.delete(roles).where(eq(roles.id, id));
+  }
+
+  // Permissions
+  async createPermission(insertPermission: InsertPermission): Promise<Permission> {
+    const result = await db.insert(permissions).values(insertPermission).returning();
+    return result[0];
+  }
+
+  async getPermission(id: string): Promise<Permission | undefined> {
+    const result = await db.select().from(permissions).where(eq(permissions.id, id));
+    return result[0];
+  }
+
+  async getAllPermissions(): Promise<Permission[]> {
+    return await db.select().from(permissions).orderBy(permissions.module, permissions.displayName);
+  }
+
+  async getPermissionsByModule(module: string): Promise<Permission[]> {
+    return await db.select().from(permissions)
+      .where(eq(permissions.module, module))
+      .orderBy(permissions.displayName);
+  }
+
+  // Role Permissions
+  async assignPermissionToRole(roleId: string, permissionId: string): Promise<RolePermission> {
+    const result = await db.insert(rolePermissions)
+      .values({ roleId, permissionId })
+      .returning();
+    return result[0];
+  }
+
+  async removePermissionFromRole(roleId: string, permissionId: string): Promise<void> {
+    await db.delete(rolePermissions)
+      .where(and(
+        eq(rolePermissions.roleId, roleId),
+        eq(rolePermissions.permissionId, permissionId)
+      ));
+  }
+
+  async getRolePermissions(roleId: string): Promise<Permission[]> {
+    const result = await db.select({ permission: permissions })
+      .from(rolePermissions)
+      .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+      .where(eq(rolePermissions.roleId, roleId));
+    return result.map(r => r.permission);
+  }
+
+  async setRolePermissions(roleId: string, permissionIds: string[]): Promise<void> {
+    await db.delete(rolePermissions).where(eq(rolePermissions.roleId, roleId));
+    if (permissionIds.length > 0) {
+      await db.insert(rolePermissions)
+        .values(permissionIds.map(permissionId => ({ roleId, permissionId })));
+    }
+  }
+
+  // Seed roles and permissions
+  async seedRolesAndPermissions(): Promise<void> {
+    const existingRoles = await this.getAllRoles();
+    if (existingRoles.length > 0) return;
+
+    const defaultRoles: InsertRole[] = [
+      { name: "system_admin", displayName: "System Administrator", description: "Full system access, user management, system configuration", isSystemRole: true },
+      { name: "program_manager", displayName: "Program Manager", description: "Oversee programs, view reports, approve assessments, manage case workers", isSystemRole: true },
+      { name: "case_worker", displayName: "Case Worker / Social Worker", description: "Register applications, conduct assessments, manage cases, record payments", isSystemRole: true },
+      { name: "data_entry", displayName: "Data Entry Clerk", description: "Limited to data entry for intake and basic updates", isSystemRole: true },
+      { name: "viewer", displayName: "Viewer / Auditor", description: "Read-only access for monitoring and auditing", isSystemRole: true },
+    ];
+
+    const defaultPermissions: InsertPermission[] = [
+      { name: "dashboard.view", displayName: "View Dashboard", description: "Access to view the dashboard", module: "Dashboard" },
+      { name: "intake.view", displayName: "View Intake", description: "Access to view intake forms", module: "Intake" },
+      { name: "intake.create", displayName: "Create Intake", description: "Create new applications", module: "Intake" },
+      { name: "intake.edit", displayName: "Edit Intake", description: "Edit existing applications", module: "Intake" },
+      { name: "assessments.view", displayName: "View Assessments", description: "View assessments", module: "Assessments" },
+      { name: "assessments.create", displayName: "Create Assessments", description: "Create new assessments", module: "Assessments" },
+      { name: "assessments.approve", displayName: "Approve Assessments", description: "Approve/reject assessments", module: "Assessments" },
+      { name: "applications.view", displayName: "View Applications", description: "View applications list", module: "Applications" },
+      { name: "applications.edit", displayName: "Edit Applications", description: "Edit application details", module: "Applications" },
+      { name: "registry.view", displayName: "View Registry", description: "View single registry", module: "Registry" },
+      { name: "registry.export", displayName: "Export Registry", description: "Export registry data", module: "Registry" },
+      { name: "cases.view", displayName: "View Cases", description: "View case management", module: "Case Management" },
+      { name: "cases.create", displayName: "Create Case Activities", description: "Log case activities", module: "Case Management" },
+      { name: "cases.assign", displayName: "Assign Cases", description: "Assign cases to workers", module: "Case Management" },
+      { name: "payments.view", displayName: "View Payments", description: "View payment records", module: "Payments" },
+      { name: "payments.create", displayName: "Create Payments", description: "Create payment records", module: "Payments" },
+      { name: "payments.approve", displayName: "Approve Payments", description: "Approve payment disbursements", module: "Payments" },
+      { name: "grievances.view", displayName: "View Grievances", description: "View grievance records", module: "Grievances" },
+      { name: "grievances.create", displayName: "Create Grievances", description: "Submit grievances", module: "Grievances" },
+      { name: "grievances.resolve", displayName: "Resolve Grievances", description: "Resolve grievance cases", module: "Grievances" },
+      { name: "reports.view", displayName: "View Reports", description: "Access M&E reports", module: "M&E Reports" },
+      { name: "reports.export", displayName: "Export Reports", description: "Export report data", module: "M&E Reports" },
+      { name: "admin.users", displayName: "Manage Users", description: "Create, edit, delete users", module: "Administration" },
+      { name: "admin.roles", displayName: "Manage Roles", description: "Create, edit roles and permissions", module: "Administration" },
+      { name: "admin.programs", displayName: "Manage Programs", description: "Create, edit assistance programs", module: "Administration" },
+      { name: "admin.settings", displayName: "System Settings", description: "Configure system settings", module: "Administration" },
+    ];
+
+    const createdRoles: Role[] = [];
+    for (const role of defaultRoles) {
+      const created = await this.createRole(role);
+      createdRoles.push(created);
+    }
+
+    const createdPermissions: Permission[] = [];
+    for (const permission of defaultPermissions) {
+      const created = await this.createPermission(permission);
+      createdPermissions.push(created);
+    }
+
+    const allPermissionIds = createdPermissions.map(p => p.id);
+    const viewOnlyPermissions = createdPermissions.filter(p => p.name.endsWith(".view")).map(p => p.id);
+    const caseWorkerPermissions = createdPermissions.filter(p => 
+      !p.name.startsWith("admin.") && 
+      !p.name.endsWith(".approve") &&
+      !p.name.includes("assign")
+    ).map(p => p.id);
+    const dataEntryPermissions = createdPermissions.filter(p =>
+      p.name === "dashboard.view" ||
+      p.name.startsWith("intake.") ||
+      p.name === "applications.view"
+    ).map(p => p.id);
+    const managerPermissions = createdPermissions.filter(p =>
+      !p.name.startsWith("admin.users") &&
+      !p.name.startsWith("admin.roles") &&
+      !p.name.startsWith("admin.settings")
+    ).map(p => p.id);
+
+    for (const role of createdRoles) {
+      let permissionIds: string[] = [];
+      switch (role.name) {
+        case "system_admin":
+          permissionIds = allPermissionIds;
+          break;
+        case "program_manager":
+          permissionIds = managerPermissions;
+          break;
+        case "case_worker":
+          permissionIds = caseWorkerPermissions;
+          break;
+        case "data_entry":
+          permissionIds = dataEntryPermissions;
+          break;
+        case "viewer":
+          permissionIds = viewOnlyPermissions;
+          break;
+      }
+      await this.setRolePermissions(role.id, permissionIds);
+    }
   }
 }
 
