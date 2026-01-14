@@ -3,8 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Pencil, AlertTriangle, ExternalLink } from "lucide-react";
+import { ArrowLeft, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 
@@ -237,51 +236,46 @@ export function ApplicationDetail() {
           )}
         </div>
 
-        {/* Related Applications Alert */}
+        {/* Related Applications Navigation */}
         {relatedApplications.length > 0 && (
-          <Alert variant="destructive" className="bg-amber-50 border-amber-300 text-amber-900">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
-            <AlertTitle className="text-amber-900 font-semibold">Other Applications Found</AlertTitle>
-            <AlertDescription className="text-amber-800">
-              <p className="mb-3">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base">Linked Applications</CardTitle>
+              </div>
+              <CardDescription>
                 {relatedApplications.length === 1 
-                  ? 'A household member appears in another application:'
-                  : `Household members appear in ${relatedApplications.length} other applications:`}
-              </p>
-              <div className="space-y-2">
+                  ? 'This household member also appears in another application'
+                  : `Household members appear in ${relatedApplications.length} other applications`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
                 {relatedApplications.map((related: any) => (
-                  <div 
-                    key={related.household.id} 
-                    className="flex items-center justify-between bg-white/60 rounded-md px-3 py-2 border border-amber-200"
+                  <Button
+                    key={related.household.id}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 bg-background hover:bg-primary/10"
+                    onClick={() => setLocation(`/application/${related.household.id}`)}
                     data-testid={`related-app-${related.household.id}`}
                   >
-                    <div>
-                      <span className="font-mono font-medium text-sm">
-                        {related.household.applicationId || related.household.householdCode}
-                      </span>
-                      <span className="mx-2 text-amber-600">•</span>
-                      <span className="text-sm">
-                        {related.matchingMembers.map((m: any) => `${m.firstName} ${m.lastName}`).join(', ')}
-                      </span>
-                      <span className="mx-2 text-amber-600">•</span>
-                      <Badge variant="outline" className="text-xs bg-white">
-                        {related.household.programStatus?.replace(/_/g, ' ')}
-                      </Badge>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="gap-1 text-amber-700 hover:text-amber-900 hover:bg-amber-100"
-                      onClick={() => setLocation(`/application/${related.household.id}`)}
-                      data-testid={`view-related-${related.household.id}`}
-                    >
-                      View <ExternalLink className="h-3 w-3" />
-                    </Button>
-                  </div>
+                    <span className="font-mono text-xs">
+                      {related.household.applicationId || related.household.householdCode}
+                    </span>
+                    <Separator orientation="vertical" className="h-4" />
+                    <span className="text-xs text-muted-foreground">
+                      {related.matchingMembers.map((m: any) => `${m.firstName} ${m.lastName}`).join(', ')}
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      {related.household.programStatus?.replace(/_/g, ' ')}
+                    </Badge>
+                  </Button>
                 ))}
               </div>
-            </AlertDescription>
-          </Alert>
+            </CardContent>
+          </Card>
         )}
 
         {/* Intake Information */}
