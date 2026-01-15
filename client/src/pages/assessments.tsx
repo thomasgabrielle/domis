@@ -468,77 +468,141 @@ export function Assessments() {
             
             {selectedHousehold && (
               <div className="space-y-6 py-4">
-                {/* Assessment Section */}
+                {/* Household Demographics */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold border-b pb-2">Assessment Details</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-muted/30 rounded-lg space-y-3">
-                      <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Applicant Information</h4>
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">
-                          {getPrimaryApplicant(selectedHousehold)?.firstName} {getPrimaryApplicant(selectedHousehold)?.lastName}
-                        </span>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {selectedHousehold.village}, {selectedHousehold.district}, {selectedHousehold.province}
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Household Members: </span>
-                        <span className="font-medium">{selectedHousehold.members?.length || 0}</span>
-                      </div>
+                  <h3 className="text-lg font-semibold border-b pb-2">Household Demographics</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          <th className="border px-3 py-2 text-left font-semibold">Name</th>
+                          <th className="border px-3 py-2 text-left font-semibold">Sex</th>
+                          <th className="border px-3 py-2 text-left font-semibold">Age</th>
+                          <th className="border px-3 py-2 text-left font-semibold">Relationship</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedHousehold.members?.map((member: any) => {
+                          const age = member.dateOfBirth 
+                            ? Math.floor((new Date().getTime() - new Date(member.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+                            : '—';
+                          return (
+                            <tr key={member.id} className="hover:bg-muted/30">
+                              <td className="border px-3 py-2">
+                                {member.firstName} {member.lastName}
+                                {member.isHead && <Badge variant="outline" className="ml-2 text-xs">Head</Badge>}
+                              </td>
+                              <td className="border px-3 py-2 capitalize">{member.gender}</td>
+                              <td className="border px-3 py-2">{age}</td>
+                              <td className="border px-3 py-2 capitalize">{member.relationshipToHead?.replace(/_/g, ' ') || '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                
+                {/* Summary Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">Summary</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Number of Household Members</p>
+                      <p className="text-2xl font-bold text-primary">{selectedHousehold.members?.length || 0}</p>
                     </div>
-                    
-                    <div className="p-4 bg-muted/30 rounded-lg space-y-3">
-                      <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Social Worker Recommendation</h4>
-                      {selectedHousehold.recommendation ? (
-                        <>
-                          <div className="flex items-center gap-2">
-                            {getDecisionBadge(selectedHousehold.recommendation)}
-                          </div>
-                          {selectedHousehold.amountAllocation && (
-                            <div className="text-sm">
-                              <span className="text-muted-foreground">Amount: </span>
-                              <span className="font-medium">${parseFloat(selectedHousehold.amountAllocation).toLocaleString()}</span>
-                            </div>
-                          )}
-                          {selectedHousehold.durationMonths && (
-                            <div className="text-sm">
-                              <span className="text-muted-foreground">Duration: </span>
-                              <span className="font-medium">{selectedHousehold.durationMonths} months</span>
-                            </div>
-                          )}
-                          {selectedHousehold.transferModality && (
-                            <div className="text-sm">
-                              <span className="text-muted-foreground">Transfer: </span>
-                              <span className="font-medium capitalize">{selectedHousehold.transferModality.replace(/_/g, ' ')}</span>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic">No recommendation recorded</p>
-                      )}
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Household Income</p>
+                      <p className="text-2xl font-bold text-primary">
+                        ${(selectedHousehold.members?.reduce((total: number, m: any) => total + (parseFloat(m.monthlyIncome) || 0), 0) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">per month</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Vulnerability Score</p>
+                      <p className="text-2xl font-bold text-primary">{selectedHousehold.vulnerabilityScore || 0}</p>
                     </div>
                   </div>
                   
-                  {/* Assessment Notes */}
-                  {selectedHousehold.assessmentNotes && (
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <h4 className="font-medium text-sm text-blue-700 mb-2">Assessment Notes</h4>
-                      <p className="text-sm text-blue-900 whitespace-pre-wrap">{selectedHousehold.assessmentNotes}</p>
+                  {/* Household Assets from Intake */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm font-semibold text-muted-foreground mb-2">Household Assets (from Intake)</p>
+                      <p className="font-medium">
+                        {selectedHousehold.householdAssetsList 
+                          ? (() => {
+                              try {
+                                const assets = JSON.parse(selectedHousehold.householdAssetsList);
+                                if (Array.isArray(assets) && assets.length > 0) {
+                                  return assets.map((a: string) => 
+                                    a.replace(/_/g, ' ').charAt(0).toUpperCase() + a.replace(/_/g, ' ').slice(1)
+                                  ).join(', ');
+                                }
+                                return 'None listed';
+                              } catch {
+                                return selectedHousehold.householdAssetsList;
+                              }
+                            })()
+                          : 'None listed'}
+                      </p>
                     </div>
-                  )}
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm font-semibold text-muted-foreground mb-2">Disability / Chronic Illness</p>
+                      <p className="font-medium">
+                        {(() => {
+                          const disabledMembers = selectedHousehold.members?.filter((m: any) => m.disabilityStatus) || [];
+                          if (disabledMembers.length > 0) {
+                            return <span className="text-amber-600">Yes - {disabledMembers.length} member(s) with disability</span>;
+                          }
+                          return <span className="text-green-600">No members with disability reported</span>;
+                        })()}
+                      </p>
+                    </div>
+                  </div>
                   
-                  {/* Household Assets */}
+                  {/* Additional Assets Notes */}
                   {selectedHousehold.householdAssets && (
                     <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                      <h4 className="font-medium text-sm text-slate-700 mb-2">Household Assets</h4>
+                      <h4 className="font-medium text-sm text-slate-700 mb-2">Additional Assets Notes</h4>
                       <p className="text-sm text-slate-900 whitespace-pre-wrap">{selectedHousehold.householdAssets}</p>
                     </div>
                   )}
+                </div>
+                
+                {/* Assessment Notes */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">Assessment Notes</h3>
+                  {selectedHousehold.assessmentNotes ? (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-900 whitespace-pre-wrap">{selectedHousehold.assessmentNotes}</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">No assessment notes recorded</p>
+                  )}
+                </div>
+                
+                {/* Social Worker Recommendations */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">Social Worker Recommendation</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Recommendation</p>
+                      <div className="mt-1">{selectedHousehold.recommendation ? getDecisionBadge(selectedHousehold.recommendation) : <span className="text-muted-foreground italic">Not set</span>}</div>
+                    </div>
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Amount Allocation</p>
+                      <p className="font-medium text-lg">{selectedHousehold.amountAllocation ? `$${parseFloat(selectedHousehold.amountAllocation).toLocaleString()}` : '—'}</p>
+                    </div>
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Duration</p>
+                      <p className="font-medium">{selectedHousehold.durationMonths ? `${selectedHousehold.durationMonths} months` : '—'}</p>
+                    </div>
+                    <div className="p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Transfer Modality</p>
+                      <p className="font-medium capitalize">{selectedHousehold.transferModality?.replace(/_/g, ' ') || '—'}</p>
+                    </div>
+                  </div>
                   
-                  {/* Complementary Activities */}
                   {selectedHousehold.complementaryActivities && (
                     <div className="p-4 bg-teal-50 border border-teal-200 rounded-lg">
                       <h4 className="font-medium text-sm text-teal-700 mb-2">Complementary Activities</h4>
@@ -546,7 +610,6 @@ export function Assessments() {
                     </div>
                   )}
                   
-                  {/* Recommendation Comments */}
                   {selectedHousehold.recommendationComments && (
                     <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
                       <h4 className="font-medium text-sm text-purple-700 mb-2">Recommendation Comments</h4>
@@ -558,7 +621,7 @@ export function Assessments() {
                 {/* Previous Workflow Decisions */}
                 {getStepDecisions(selectedHousehold).length > 0 && (
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold border-b pb-2">Previous Recommendations</h3>
+                    <h3 className="text-lg font-semibold border-b pb-2">Previous Recommendations in Workflow</h3>
                     <div className="space-y-3">
                       {getStepDecisions(selectedHousehold).map((stepDecision, index) => (
                         <div key={index} className="p-4 border rounded-lg bg-card">
@@ -684,30 +747,110 @@ export function Assessments() {
             <DialogHeader>
               <DialogTitle>Full Application Details</DialogTitle>
               <DialogDescription>
-                Complete application information for {selectedHousehold?.applicationId || selectedHousehold?.householdCode}
+                Complete intake and application information for {selectedHousehold?.applicationId || selectedHousehold?.householdCode}
               </DialogDescription>
             </DialogHeader>
             
             {selectedHousehold && (
               <div className="space-y-6 py-4">
-                {/* Household Information */}
+                {/* Intake Information */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold border-b pb-2">Household Information</h3>
+                  <h3 className="text-lg font-semibold border-b pb-2">Intake Information</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">Application ID:</span>
-                      <p className="font-medium">{selectedHousehold.applicationId}</p>
+                      <p className="font-medium font-mono">{selectedHousehold.applicationId}</p>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Household Code:</span>
-                      <p className="font-medium">{selectedHousehold.householdCode}</p>
+                      <p className="font-medium font-mono">{selectedHousehold.householdCode}</p>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Status:</span>
                       <p className="font-medium capitalize">{selectedHousehold.programStatus?.replace(/_/g, ' ')}</p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Province:</span>
+                      <span className="text-muted-foreground">Date of Intake:</span>
+                      <p className="font-medium">{selectedHousehold.intakeDate || selectedHousehold.registrationDate || '—'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Type of Outreach:</span>
+                      <p className="font-medium capitalize">{selectedHousehold.outreachType?.replace(/_/g, ' ') || '—'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Outreach Method:</span>
+                      <p className="font-medium capitalize">{selectedHousehold.outreachMethod?.replace(/_/g, ' ') || '—'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">On Own Behalf:</span>
+                      <p className="font-medium">{selectedHousehold.isOnOwnBehalf ? 'Yes' : 'No (Proxy)'}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <span className="text-muted-foreground">Purpose of Request:</span>
+                      <p className="font-medium capitalize">{selectedHousehold.requestPurpose?.replace(/_/g, ' ') || '—'}</p>
+                    </div>
+                    <div className="md:col-span-3">
+                      <span className="text-muted-foreground">Action Taken:</span>
+                      <p className="font-medium capitalize">{selectedHousehold.actionTaken?.replace(/_/g, ' ') || '—'}</p>
+                    </div>
+                    {selectedHousehold.followUpNotes && (
+                      <div className="md:col-span-3">
+                        <span className="text-muted-foreground">Follow Up Notes:</span>
+                        <p className="font-medium">{selectedHousehold.followUpNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Proxy Information */}
+                {!selectedHousehold.isOnOwnBehalf && selectedHousehold.proxyFirstName && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold border-b pb-2">Proxy Information</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Proxy Name:</span>
+                        <p className="font-medium">{selectedHousehold.proxyFirstName} {selectedHousehold.proxyLastName}</p>
+                      </div>
+                      {selectedHousehold.proxyGender && (
+                        <div>
+                          <span className="text-muted-foreground">Gender:</span>
+                          <p className="font-medium capitalize">{selectedHousehold.proxyGender}</p>
+                        </div>
+                      )}
+                      {selectedHousehold.proxyPhone && (
+                        <div>
+                          <span className="text-muted-foreground">Phone:</span>
+                          <p className="font-medium">{selectedHousehold.proxyPhone}</p>
+                        </div>
+                      )}
+                      {selectedHousehold.proxyNationalId && (
+                        <div>
+                          <span className="text-muted-foreground">National ID:</span>
+                          <p className="font-medium font-mono">{selectedHousehold.proxyNationalId}</p>
+                        </div>
+                      )}
+                      {selectedHousehold.proxyRelationship && (
+                        <div>
+                          <span className="text-muted-foreground">Relationship:</span>
+                          <p className="font-medium capitalize">{selectedHousehold.proxyRelationship}</p>
+                        </div>
+                      )}
+                      {selectedHousehold.proxyReason && (
+                        <div className="md:col-span-3">
+                          <span className="text-muted-foreground">Reason for Proxy:</span>
+                          <p className="font-medium">{selectedHousehold.proxyReason}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Location & Address */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">Location & Address</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Province/Region:</span>
                       <p className="font-medium">{selectedHousehold.province}</p>
                     </div>
                     <div>
@@ -715,100 +858,134 @@ export function Assessments() {
                       <p className="font-medium">{selectedHousehold.district}</p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Village:</span>
+                      <span className="text-muted-foreground">Village/Community:</span>
                       <p className="font-medium">{selectedHousehold.village}</p>
                     </div>
                     {selectedHousehold.address && (
-                      <div className="col-span-2">
+                      <div className="md:col-span-2">
                         <span className="text-muted-foreground">Address:</span>
                         <p className="font-medium">{selectedHousehold.address}</p>
                       </div>
                     )}
                     {selectedHousehold.gpsCoordinates && (
                       <div>
-                        <span className="text-muted-foreground">GPS:</span>
-                        <p className="font-medium">{selectedHousehold.gpsCoordinates}</p>
+                        <span className="text-muted-foreground">GPS Coordinates:</span>
+                        <p className="font-medium font-mono">{selectedHousehold.gpsCoordinates}</p>
                       </div>
                     )}
                   </div>
                 </div>
                 
-                {/* Household Members */}
+                {/* Household Details */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold border-b pb-2">Household Members ({selectedHousehold.members?.length || 0})</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm border-collapse">
-                      <thead>
-                        <tr className="bg-muted/50">
-                          <th className="border px-3 py-2 text-left font-semibold">Name</th>
-                          <th className="border px-3 py-2 text-left font-semibold">Relationship</th>
-                          <th className="border px-3 py-2 text-left font-semibold">Gender</th>
-                          <th className="border px-3 py-2 text-left font-semibold">Age</th>
-                          <th className="border px-3 py-2 text-left font-semibold">National ID</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedHousehold.members?.map((member: any) => {
-                          const age = member.dateOfBirth 
-                            ? Math.floor((new Date().getTime() - new Date(member.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-                            : '—';
-                          return (
-                            <tr key={member.id} className="hover:bg-muted/30">
-                              <td className="border px-3 py-2">
-                                {member.firstName} {member.lastName}
-                                {member.isHead && <Badge variant="outline" className="ml-2 text-xs">Head</Badge>}
-                              </td>
-                              <td className="border px-3 py-2 capitalize">{member.relationshipToHead?.replace(/_/g, ' ') || '—'}</td>
-                              <td className="border px-3 py-2 capitalize">{member.gender}</td>
-                              <td className="border px-3 py-2">{age}</td>
-                              <td className="border px-3 py-2">{member.nationalId || '—'}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                  <h3 className="text-lg font-semibold border-b pb-2">Household Details</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                    {selectedHousehold.roofType && (
+                      <div>
+                        <span className="text-muted-foreground">Roof Type:</span>
+                        <p className="font-medium capitalize">{selectedHousehold.roofType}</p>
+                      </div>
+                    )}
+                    {selectedHousehold.wallType && (
+                      <div>
+                        <span className="text-muted-foreground">Wall Type:</span>
+                        <p className="font-medium capitalize">{selectedHousehold.wallType}</p>
+                      </div>
+                    )}
+                    <div className="md:col-span-3">
+                      <span className="text-muted-foreground">Household Assets:</span>
+                      <p className="font-medium">
+                        {selectedHousehold.householdAssetsList 
+                          ? (() => {
+                              try {
+                                const assets = JSON.parse(selectedHousehold.householdAssetsList);
+                                if (Array.isArray(assets) && assets.length > 0) {
+                                  return assets.map((a: string) => 
+                                    a.replace(/_/g, ' ').charAt(0).toUpperCase() + a.replace(/_/g, ' ').slice(1)
+                                  ).join(', ');
+                                }
+                                return 'None listed';
+                              } catch {
+                                return selectedHousehold.householdAssetsList;
+                              }
+                            })()
+                          : 'None listed'}
+                      </p>
+                    </div>
                   </div>
                 </div>
                 
-                {/* Assessment Information */}
+                {/* All Household Members - Detailed */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold border-b pb-2">Assessment Information</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Recommendation:</span>
-                      <p className="font-medium capitalize">{selectedHousehold.recommendation || '—'}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Amount Allocation:</span>
-                      <p className="font-medium">{selectedHousehold.amountAllocation ? `$${parseFloat(selectedHousehold.amountAllocation).toLocaleString()}` : '—'}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Duration:</span>
-                      <p className="font-medium">{selectedHousehold.durationMonths ? `${selectedHousehold.durationMonths} months` : '—'}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Transfer Modality:</span>
-                      <p className="font-medium capitalize">{selectedHousehold.transferModality?.replace(/_/g, ' ') || '—'}</p>
-                    </div>
+                  <h3 className="text-lg font-semibold border-b pb-2">Household Members ({selectedHousehold.members?.length || 0})</h3>
+                  <div className="space-y-4">
+                    {selectedHousehold.members?.map((member: any, idx: number) => {
+                      const age = member.dateOfBirth 
+                        ? Math.floor((new Date().getTime() - new Date(member.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+                        : null;
+                      return (
+                        <div key={member.id} className="p-4 border rounded-lg bg-muted/20">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="font-semibold text-lg">{member.firstName} {member.lastName}</span>
+                            {member.isHead && <Badge className="bg-primary text-primary-foreground">Head of Household</Badge>}
+                            {member.disabilityStatus && <Badge variant="outline" className="border-amber-500 text-amber-600">Has Disability</Badge>}
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Relationship:</span>
+                              <p className="font-medium capitalize">{member.relationshipToHead?.replace(/_/g, ' ') || '—'}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Gender:</span>
+                              <p className="font-medium capitalize">{member.gender}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Age:</span>
+                              <p className="font-medium">{age || '—'}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Date of Birth:</span>
+                              <p className="font-medium">{member.dateOfBirth || '—'}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">National ID:</span>
+                              <p className="font-medium font-mono">{member.nationalId || '—'}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Marital Status:</span>
+                              <p className="font-medium capitalize">{member.maritalStatus || '—'}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Employment:</span>
+                              <p className="font-medium capitalize">{member.employmentStatus?.replace(/_/g, ' ') || '—'}</p>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Monthly Income:</span>
+                              <p className="font-medium">{member.monthlyIncome ? `$${parseFloat(member.monthlyIncome).toLocaleString()}` : '—'}</p>
+                            </div>
+                            {member.educationLevel && (
+                              <div>
+                                <span className="text-muted-foreground">Education:</span>
+                                <p className="font-medium capitalize">{member.educationLevel.replace(/_/g, ' ')}</p>
+                              </div>
+                            )}
+                            {member.isEnrolledInSchool !== null && member.isEnrolledInSchool !== undefined && (
+                              <div>
+                                <span className="text-muted-foreground">Enrolled in School:</span>
+                                <p className="font-medium">{member.isEnrolledInSchool ? 'Yes' : 'No'}</p>
+                              </div>
+                            )}
+                            <div>
+                              <span className="text-muted-foreground">Disability/Chronic Illness:</span>
+                              <p className={`font-medium ${member.disabilityStatus ? 'text-amber-600' : 'text-green-600'}`}>
+                                {member.disabilityStatus ? 'Yes' : 'No'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  {selectedHousehold.assessmentNotes && (
-                    <div>
-                      <span className="text-muted-foreground text-sm">Assessment Notes:</span>
-                      <p className="mt-1 p-3 bg-muted/30 rounded text-sm whitespace-pre-wrap">{selectedHousehold.assessmentNotes}</p>
-                    </div>
-                  )}
-                  {selectedHousehold.householdAssets && (
-                    <div>
-                      <span className="text-muted-foreground text-sm">Household Assets:</span>
-                      <p className="mt-1 p-3 bg-muted/30 rounded text-sm whitespace-pre-wrap">{selectedHousehold.householdAssets}</p>
-                    </div>
-                  )}
-                  {selectedHousehold.complementaryActivities && (
-                    <div>
-                      <span className="text-muted-foreground text-sm">Complementary Activities:</span>
-                      <p className="mt-1 p-3 bg-muted/30 rounded text-sm whitespace-pre-wrap">{selectedHousehold.complementaryActivities}</p>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
