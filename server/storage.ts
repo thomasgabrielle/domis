@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { neonConfig, Pool } from "@neondatabase/serverless";
 import ws from "ws";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, ne, sql } from "drizzle-orm";
 import { 
   users, households, householdMembers, assessments, grievances, 
   payments, programs, caseActivities, roles, permissions, rolePermissions,
@@ -74,6 +74,7 @@ export interface IStorage {
   
   // Registry lookup
   findMemberByNationalId(nationalId: string): Promise<{ member: HouseholdMember; household: Household; allMembers: HouseholdMember[] } | undefined>;
+  findRelatedApplicationsByNationalIds(excludeHouseholdId: string, nationalIds: string[]): Promise<any[]>;
   
   // Roles
   createRole(role: InsertRole): Promise<Role>;
@@ -415,6 +416,46 @@ export class DatabaseStorage implements IStorage {
       household: result[0].household,
       allMembers
     };
+  }
+
+  async findRelatedApplicationsByNationalIds(excludeHouseholdId: string, nationalIds: string[]): Promise<any[]> {
+    if (nationalIds.length === 0) return [];
+    
+    // Single query to find all members with matching national IDs (excluding current household)
+    const matchingMembers = await db.select({
+      member: householdMembers,
+      household: households
+    })
+    .from(householdMembers)
+    .innerJoin(households, eq(householdMembers.householdId, households.id))
+    .where(
+      and(
+        ne(householdMembers.householdId, excludeHouseholdId),
+        sql`UPPER(TRIM(${householdMembers.nationalId})) = ANY(${nationalIds})`
+      )
+    );
+    
+    // Group by household
+    const householdMap = new Map<string, { household: any; matchingMembers: any[] }>();
+    
+    for (const row of matchingMembers) {
+      const hId = row.household.id;
+      if (!householdMap.has(hId)) {
+        householdMap.set(hId, { 
+          household: row.household, 
+          matchingMembers: [] 
+        });
+      }
+      householdMap.get(hId)!.matchingMembers.push({
+        id: row.member.id,
+        firstName: row.member.firstName,
+        lastName: row.member.lastName,
+        nationalId: row.member.nationalId,
+        relationshipToHead: row.member.relationshipToHead,
+      });
+    }
+    
+    return Array.from(householdMap.values());
   }
 
   // Roles

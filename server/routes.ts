@@ -145,30 +145,8 @@ export async function registerRoutes(
         return res.json([]);
       }
       
-      const allHouseholds = await storage.getAllHouseholds();
-      const relatedApplications: any[] = [];
-      
-      for (const household of allHouseholds) {
-        if (household.id === householdId) continue;
-        
-        const members = await storage.getHouseholdMembers(household.id);
-        const matchingMembers = members.filter(m => 
-          m.nationalId && nationalIds.includes(m.nationalId.trim().toUpperCase())
-        );
-        
-        if (matchingMembers.length > 0) {
-          relatedApplications.push({
-            household,
-            matchingMembers: matchingMembers.map(m => ({
-              id: m.id,
-              firstName: m.firstName,
-              lastName: m.lastName,
-              nationalId: m.nationalId,
-              relationshipToHead: m.relationshipToHead,
-            })),
-          });
-        }
-      }
+      // Use optimized query that fetches all matching members in one call
+      const relatedApplications = await storage.findRelatedApplicationsByNationalIds(householdId, nationalIds);
       
       res.json(relatedApplications);
     } catch (error: any) {
