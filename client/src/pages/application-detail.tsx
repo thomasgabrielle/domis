@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ArrowRight, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Pencil, ClipboardCheck, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Pencil, ClipboardCheck, Save, Loader2, AlertCircle, MessageSquare } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { useState, useEffect } from "react";
@@ -112,6 +113,7 @@ export function ApplicationDetail() {
           complementaryActivities,
           recommendationComments,
           assessmentStep: 'coordinator', // Move to Recommendations module
+          programStatus: 'pending_assessment', // Clear any pending_additional_info status
         },
         members: data?.members || [],
       });
@@ -789,6 +791,46 @@ export function ApplicationDetail() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Reviewer Feedback Alert - shown when application was returned for additional info */}
+            {household.programStatus === 'pending_additional_info' && (
+              <Alert variant="default" className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+                <MessageSquare className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-800 dark:text-amber-200">Additional Information Requested</AlertTitle>
+                <AlertDescription className="text-amber-700 dark:text-amber-300">
+                  <p className="mb-2">This application was returned by a reviewer requesting additional information. Please review the comments below and update the application as needed.</p>
+                  <div className="space-y-3 mt-3 p-3 bg-white/50 dark:bg-black/20 rounded border border-amber-200 dark:border-amber-800">
+                    {household.coordinatorComments && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-amber-600">Coordinator Comments:</p>
+                        <p className="text-sm mt-1">{household.coordinatorComments}</p>
+                      </div>
+                    )}
+                    {household.directorComments && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-amber-600">Director Comments:</p>
+                        <p className="text-sm mt-1">{household.directorComments}</p>
+                      </div>
+                    )}
+                    {household.permanentSecretaryComments && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-amber-600">Permanent Secretary Comments:</p>
+                        <p className="text-sm mt-1">{household.permanentSecretaryComments}</p>
+                      </div>
+                    )}
+                    {household.ministerComments && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-amber-600">Minister Comments:</p>
+                        <p className="text-sm mt-1">{household.ministerComments}</p>
+                      </div>
+                    )}
+                    {!household.coordinatorComments && !household.directorComments && !household.permanentSecretaryComments && !household.ministerComments && (
+                      <p className="text-sm italic">No specific comments were provided by the reviewer.</p>
+                    )}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Household Demographics */}
             <div>
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">Household Demographics</h3>
