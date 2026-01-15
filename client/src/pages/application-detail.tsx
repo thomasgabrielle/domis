@@ -84,13 +84,15 @@ export function ApplicationDetail() {
           transferModality,
           complementaryActivities,
           recommendationComments,
+          assessmentStep: 'coordinator', // Move to Assessments & Recommendations module
         },
         members: data?.members || [],
       });
     },
     onSuccess: () => {
-      toast({ title: "Assessment saved", description: "Your assessment notes have been saved." });
+      toast({ title: "Assessment saved", description: "Application moved to Assessments & Recommendations for Coordinator review." });
       queryClient.invalidateQueries({ queryKey: ['household', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/households'] });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
