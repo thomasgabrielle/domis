@@ -121,7 +121,7 @@ export function Assessments() {
           title: "Assessment Saved",
           description: nextStepConfig 
             ? `Application moved to ${nextStepConfig.label} for review.`
-            : "Assessment workflow completed.",
+            : "Recommendation workflow completed.",
         });
       }
       
@@ -373,7 +373,7 @@ export function Assessments() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Assessment Workflow</CardTitle>
+            <CardTitle>Recommendation Workflow</CardTitle>
             <CardDescription>Applications progress through each approval level sequentially.</CardDescription>
           </CardHeader>
           <CardContent>
