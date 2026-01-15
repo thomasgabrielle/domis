@@ -93,6 +93,9 @@ export function ApplicationDetail() {
       toast({ title: "Assessment saved", description: "Application moved to Assessments & Recommendations for Coordinator review." });
       queryClient.invalidateQueries({ queryKey: ['household', householdId] });
       queryClient.invalidateQueries({ queryKey: ['/api/households'] });
+      queryClient.invalidateQueries({ queryKey: ['households'] });
+      queryClient.invalidateQueries({ queryKey: ['all-members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/households-with-members'] });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
