@@ -72,6 +72,7 @@ export function ApplicationDetail() {
     }
   }, [data]);
 
+  // Save assessment without sending to Coordinator
   const saveAssessmentMutation = useMutation({
     mutationFn: async () => {
       return apiRequest("PUT", `/api/households/${householdId}`, {
@@ -84,13 +85,39 @@ export function ApplicationDetail() {
           transferModality,
           complementaryActivities,
           recommendationComments,
-          assessmentStep: 'coordinator', // Move to Assessments & Recommendations module
         },
         members: data?.members || [],
       });
     },
     onSuccess: () => {
-      toast({ title: "Assessment saved", description: "Application moved to Assessments & Recommendations for Coordinator review." });
+      toast({ title: "Assessment saved", description: "Your changes have been saved." });
+      queryClient.invalidateQueries({ queryKey: ['household', householdId] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Save and send to Coordinator
+  const sendToCoordinatorMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PUT", `/api/households/${householdId}`, {
+        household: {
+          assessmentNotes,
+          householdAssets,
+          recommendation,
+          amountAllocation: amountAllocation ? parseFloat(amountAllocation) : null,
+          durationMonths: durationMonths ? parseInt(durationMonths) : null,
+          transferModality,
+          complementaryActivities,
+          recommendationComments,
+          assessmentStep: 'coordinator', // Move to Recommendations module
+        },
+        members: data?.members || [],
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Sent to Coordinator", description: "Application moved to Recommendations for Coordinator review." });
       queryClient.invalidateQueries({ queryKey: ['household', householdId] });
       queryClient.invalidateQueries({ queryKey: ['/api/households'] });
       queryClient.invalidateQueries({ queryKey: ['households'] });
@@ -720,19 +747,35 @@ export function ApplicationDetail() {
                 <ClipboardCheck className="h-5 w-5 text-primary" />
                 <CardTitle>Assessment</CardTitle>
               </div>
-              <Button
-                onClick={() => saveAssessmentMutation.mutate()}
-                disabled={saveAssessmentMutation.isPending}
-                className="gap-2"
-                data-testid="button-save-assessment"
-              >
-                {saveAssessmentMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                Save Assessment
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => saveAssessmentMutation.mutate()}
+                  disabled={saveAssessmentMutation.isPending || sendToCoordinatorMutation.isPending}
+                  className="gap-2"
+                  data-testid="button-save-assessment"
+                >
+                  {saveAssessmentMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Save
+                </Button>
+                <Button
+                  onClick={() => sendToCoordinatorMutation.mutate()}
+                  disabled={saveAssessmentMutation.isPending || sendToCoordinatorMutation.isPending}
+                  className="gap-2"
+                  data-testid="button-send-to-coordinator"
+                >
+                  {sendToCoordinatorMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="h-4 w-4" />
+                  )}
+                  Save and Send to Coordinator
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">

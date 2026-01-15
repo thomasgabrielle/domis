@@ -264,7 +264,7 @@ export function Assessments() {
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-heading font-bold text-foreground">Assessments & Recommendations</h1>
+            <h1 className="text-3xl font-heading font-bold text-foreground">Recommendations</h1>
             <p className="text-muted-foreground">Review applications through the approval workflow.</p>
           </div>
         </div>
