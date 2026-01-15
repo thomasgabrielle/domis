@@ -48,13 +48,16 @@ The data model follows social protection program requirements with these core en
 - Authentication credentials
 
 **Households Table:**
-- Unique household codes (HH-YYYY-XXX format)
+- Unique household codes (HH-YYYY-XXX format) and Application IDs (APP-YYYY-XXX format)
 - Location hierarchy: province → district → village
 - GPS coordinates for mapping
 - Vulnerability scoring (0-100 scale)
-- Program status tracking (pending_assessment, enrolled, etc.)
+- Program status tracking (pending_assessment, enrolled, ineligible)
 - Social worker assignment
 - Temporal tracking (registration, enrollment, last assessment dates)
+- Assessment workflow step tracking (coordinator → director → permanent_secretary → minister → completed)
+- Step-specific decision/comments fields for audit trail
+- Recommendation fields (amount allocation, duration, transfer modality, complementary activities)
 
 **Household Members Table:**
 - Demographic information (name, DOB, gender)
