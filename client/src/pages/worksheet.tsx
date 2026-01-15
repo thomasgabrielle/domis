@@ -182,9 +182,9 @@ export function Worksheet() {
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <p className="text-sm font-medium text-muted-foreground">Enrolled</p>
-              <p className="text-2xl font-bold text-emerald-600" data-testid="text-enrolled-count">
-                {applications.filter(a => a.status === 'enrolled').length}
+              <p className="text-sm font-medium text-muted-foreground">Rejected</p>
+              <p className="text-2xl font-bold text-destructive" data-testid="text-rejected-count">
+                {applications.filter(a => a.status === 'rejected').length}
               </p>
             </CardContent>
           </Card>
