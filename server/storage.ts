@@ -219,6 +219,14 @@ export class DatabaseStorage implements IStorage {
     if (householdData.wallType !== undefined) updateData.wallType = householdData.wallType || null;
     if (householdData.householdAssetsList !== undefined) updateData.householdAssetsList = householdData.householdAssetsList || null;
     
+    // Recommendation fields
+    if (householdData.recommendation !== undefined) updateData.recommendation = householdData.recommendation || null;
+    if (householdData.amountAllocation !== undefined) updateData.amountAllocation = householdData.amountAllocation || null;
+    if (householdData.durationMonths !== undefined) updateData.durationMonths = householdData.durationMonths || null;
+    if (householdData.transferModality !== undefined) updateData.transferModality = householdData.transferModality || null;
+    if (householdData.complementaryActivities !== undefined) updateData.complementaryActivities = householdData.complementaryActivities || null;
+    if (householdData.recommendationComments !== undefined) updateData.recommendationComments = householdData.recommendationComments || null;
+    
     if (householdData.proxyFirstName !== undefined) updateData.proxyFirstName = householdData.proxyFirstName || null;
     if (householdData.proxyLastName !== undefined) updateData.proxyLastName = householdData.proxyLastName || null;
     if (householdData.proxyAlias !== undefined) updateData.proxyAlias = householdData.proxyAlias || null;
