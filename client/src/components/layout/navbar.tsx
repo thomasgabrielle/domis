@@ -13,7 +13,7 @@ export function Navbar() {
     { href: "/", label: "Dashboard", icon: Building2 },
     { href: "/registration", label: "Intake", icon: Users },
     { href: "/worksheet", label: "Applications", icon: FileSpreadsheet },
-    { href: "/assessments", label: "Assessments", icon: ClipboardCheck },
+    { href: "/assessments", label: "Assessments & Recommendations", icon: ClipboardCheck },
     { href: "/registry", label: "Clients", icon: BookUser },
     { href: "/cases", label: "Case Mgmt", icon: Briefcase },
     { href: "/payments", label: "Payments", icon: CreditCard },

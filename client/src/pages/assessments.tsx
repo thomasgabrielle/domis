@@ -98,7 +98,7 @@ export function Assessments() {
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-heading font-bold text-foreground">Assessments & Eligibility</h1>
+            <h1 className="text-3xl font-heading font-bold text-foreground">Assessments & Recommendations</h1>
             <p className="text-muted-foreground">Review households and determine program eligibility.</p>
           </div>
         </div>
