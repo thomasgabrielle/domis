@@ -42,6 +42,7 @@ export function Assessments() {
   
   const [decision, setDecision] = useState<'agree' | 'disagree' | 'requires_further_info'>('agree');
   const [comments, setComments] = useState('');
+  const [fullApplicationOpen, setFullApplicationOpen] = useState(false);
 
   const { data: householdsData = [], isLoading } = useQuery({
     queryKey: ['/api/households-with-members'],
@@ -291,19 +292,14 @@ export function Assessments() {
           </div>
         </div>
         
-        <div className="w-full lg:w-64 space-y-3 flex flex-col justify-center">
-          <Link href={`/application/${household.id}`}>
-            <Button variant="outline" className="w-full" data-testid={`button-view-${household.id}`}>
-              View Details
-            </Button>
-          </Link>
+        <div className="w-full lg:w-48 flex flex-col justify-center">
           <Button 
             className="w-full gap-2"
             onClick={() => handleOpenReview(household, step)}
             disabled={progressAssessmentMutation.isPending}
             data-testid={`button-review-${household.id}`}
           >
-            Review & Decide
+            Review Assessment
           </Button>
         </div>
       </div>
@@ -440,97 +436,200 @@ export function Assessments() {
           </CardContent>
         </Card>
 
-        {/* Review Dialog */}
+        {/* Review Assessment Dialog */}
         <Dialog open={reviewDialogOpen} onOpenChange={(open) => {
           if (!open) {
             setReviewDialogOpen(false);
             setSelectedHousehold(null);
+            setFullApplicationOpen(false);
           }
         }}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                {getCurrentStepLabel()} Review
-              </DialogTitle>
-              <DialogDescription>
-                Review application {selectedHousehold?.applicationId || selectedHousehold?.householdCode} and make your decision.
-              </DialogDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle className="flex items-center gap-2 text-xl">
+                    {getCurrentStepLabel()} Review
+                  </DialogTitle>
+                  <DialogDescription>
+                    Application {selectedHousehold?.applicationId || selectedHousehold?.householdCode}
+                  </DialogDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setFullApplicationOpen(true)}
+                  data-testid="button-view-full-application"
+                >
+                  View Full Application
+                </Button>
+              </div>
             </DialogHeader>
             
-            <div className="space-y-4 py-4">
-              {selectedHousehold && (
-                <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">
-                      {getPrimaryApplicant(selectedHousehold)?.firstName} {getPrimaryApplicant(selectedHousehold)?.lastName}
-                    </span>
+            {selectedHousehold && (
+              <div className="space-y-6 py-4">
+                {/* Assessment Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">Assessment Details</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                      <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Applicant Information</h4>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">
+                          {getPrimaryApplicant(selectedHousehold)?.firstName} {getPrimaryApplicant(selectedHousehold)?.lastName}
+                        </span>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {selectedHousehold.village}, {selectedHousehold.district}, {selectedHousehold.province}
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Household Members: </span>
+                        <span className="font-medium">{selectedHousehold.members?.length || 0}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                      <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Social Worker Recommendation</h4>
+                      {selectedHousehold.recommendation ? (
+                        <>
+                          <div className="flex items-center gap-2">
+                            {getDecisionBadge(selectedHousehold.recommendation)}
+                          </div>
+                          {selectedHousehold.amountAllocation && (
+                            <div className="text-sm">
+                              <span className="text-muted-foreground">Amount: </span>
+                              <span className="font-medium">${parseFloat(selectedHousehold.amountAllocation).toLocaleString()}</span>
+                            </div>
+                          )}
+                          {selectedHousehold.durationMonths && (
+                            <div className="text-sm">
+                              <span className="text-muted-foreground">Duration: </span>
+                              <span className="font-medium">{selectedHousehold.durationMonths} months</span>
+                            </div>
+                          )}
+                          {selectedHousehold.transferModality && (
+                            <div className="text-sm">
+                              <span className="text-muted-foreground">Transfer: </span>
+                              <span className="font-medium capitalize">{selectedHousehold.transferModality.replace(/_/g, ' ')}</span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">No recommendation recorded</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {selectedHousehold.village}, {selectedHousehold.district}, {selectedHousehold.province}
-                  </div>
-                  {selectedHousehold.recommendation && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Initial Recommendation: </span>
-                      <span className="font-medium capitalize">{selectedHousehold.recommendation}</span>
+                  
+                  {/* Assessment Notes */}
+                  {selectedHousehold.assessmentNotes && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h4 className="font-medium text-sm text-blue-700 mb-2">Assessment Notes</h4>
+                      <p className="text-sm text-blue-900 whitespace-pre-wrap">{selectedHousehold.assessmentNotes}</p>
                     </div>
                   )}
-                  {selectedHousehold.amountAllocation && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Amount: </span>
-                      <span className="font-medium">${selectedHousehold.amountAllocation}</span>
+                  
+                  {/* Household Assets */}
+                  {selectedHousehold.householdAssets && (
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                      <h4 className="font-medium text-sm text-slate-700 mb-2">Household Assets</h4>
+                      <p className="text-sm text-slate-900 whitespace-pre-wrap">{selectedHousehold.householdAssets}</p>
+                    </div>
+                  )}
+                  
+                  {/* Complementary Activities */}
+                  {selectedHousehold.complementaryActivities && (
+                    <div className="p-4 bg-teal-50 border border-teal-200 rounded-lg">
+                      <h4 className="font-medium text-sm text-teal-700 mb-2">Complementary Activities</h4>
+                      <p className="text-sm text-teal-900 whitespace-pre-wrap">{selectedHousehold.complementaryActivities}</p>
+                    </div>
+                  )}
+                  
+                  {/* Recommendation Comments */}
+                  {selectedHousehold.recommendationComments && (
+                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                      <h4 className="font-medium text-sm text-purple-700 mb-2">Recommendation Comments</h4>
+                      <p className="text-sm text-purple-900 whitespace-pre-wrap">{selectedHousehold.recommendationComments}</p>
                     </div>
                   )}
                 </div>
-              )}
-              
-              <div className="space-y-2">
-                <Label>Your Decision</Label>
-                <Select value={decision} onValueChange={(v: 'agree' | 'disagree' | 'requires_further_info') => setDecision(v)}>
-                  <SelectTrigger data-testid="select-decision">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="agree">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                        <span>Agree - Approve and move to next step</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="disagree">
-                      <div className="flex items-center gap-2">
-                        <XCircle className="h-4 w-4 text-red-600" />
-                        <span>Disagree - Reject but move to next step</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="requires_further_info">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 text-amber-600" />
-                        <span>Requires More Information - Return to Applications</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Comments</Label>
-                <Textarea 
-                  value={comments}
-                  onChange={(e) => setComments(e.target.value)}
-                  placeholder="Add your review comments..."
-                  rows={4}
-                  data-testid="textarea-comments"
-                />
-              </div>
-              
-              {decision === 'requires_further_info' && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                  <AlertCircle className="h-4 w-4 inline mr-2" />
-                  This will return the application to the Applications module for additional information.
+                
+                {/* Previous Workflow Decisions */}
+                {getStepDecisions(selectedHousehold).length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold border-b pb-2">Previous Recommendations</h3>
+                    <div className="space-y-3">
+                      {getStepDecisions(selectedHousehold).map((stepDecision, index) => (
+                        <div key={index} className="p-4 border rounded-lg bg-card">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium">{stepDecision.step}</span>
+                            {getDecisionBadge(stepDecision.decision)}
+                          </div>
+                          {stepDecision.comments && (
+                            <p className="text-sm text-muted-foreground mt-2">{stepDecision.comments}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <Separator />
+                
+                {/* Your Decision Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Your Decision</h3>
+                  
+                  <div className="space-y-2">
+                    <Label>Decision</Label>
+                    <Select value={decision} onValueChange={(v: 'agree' | 'disagree' | 'requires_further_info') => setDecision(v)}>
+                      <SelectTrigger data-testid="select-decision">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="agree">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                            <span>Agree - Approve and move to next step</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="disagree">
+                          <div className="flex items-center gap-2">
+                            <XCircle className="h-4 w-4 text-red-600" />
+                            <span>Disagree - Reject but move to next step</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="requires_further_info">
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4 text-amber-600" />
+                            <span>Requires More Information - Return to Applications</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Comments</Label>
+                    <Textarea 
+                      value={comments}
+                      onChange={(e) => setComments(e.target.value)}
+                      placeholder="Add your review comments..."
+                      rows={4}
+                      data-testid="textarea-comments"
+                    />
+                  </div>
+                  
+                  {decision === 'requires_further_info' && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                      <AlertCircle className="h-4 w-4 inline mr-2" />
+                      This will return the application to the Applications module for additional information.
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
             
             <DialogFooter className="flex gap-2">
               <Button type="button" variant="outline" onClick={() => {
@@ -574,6 +673,149 @@ export function Assessments() {
                   const nextStepConfig = WORKFLOW_STEPS.find(s => s.id === stepConfig?.nextStep);
                   return nextStepConfig ? `Save and Send to ${nextStepConfig.label}` : 'Save and Complete';
                 })()}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Full Application Popup */}
+        <Dialog open={fullApplicationOpen} onOpenChange={setFullApplicationOpen}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Full Application Details</DialogTitle>
+              <DialogDescription>
+                Complete application information for {selectedHousehold?.applicationId || selectedHousehold?.householdCode}
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedHousehold && (
+              <div className="space-y-6 py-4">
+                {/* Household Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">Household Information</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Application ID:</span>
+                      <p className="font-medium">{selectedHousehold.applicationId}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Household Code:</span>
+                      <p className="font-medium">{selectedHousehold.householdCode}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Status:</span>
+                      <p className="font-medium capitalize">{selectedHousehold.programStatus?.replace(/_/g, ' ')}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Province:</span>
+                      <p className="font-medium">{selectedHousehold.province}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">District:</span>
+                      <p className="font-medium">{selectedHousehold.district}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Village:</span>
+                      <p className="font-medium">{selectedHousehold.village}</p>
+                    </div>
+                    {selectedHousehold.address && (
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Address:</span>
+                        <p className="font-medium">{selectedHousehold.address}</p>
+                      </div>
+                    )}
+                    {selectedHousehold.gpsCoordinates && (
+                      <div>
+                        <span className="text-muted-foreground">GPS:</span>
+                        <p className="font-medium">{selectedHousehold.gpsCoordinates}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Household Members */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">Household Members ({selectedHousehold.members?.length || 0})</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          <th className="border px-3 py-2 text-left font-semibold">Name</th>
+                          <th className="border px-3 py-2 text-left font-semibold">Relationship</th>
+                          <th className="border px-3 py-2 text-left font-semibold">Gender</th>
+                          <th className="border px-3 py-2 text-left font-semibold">Age</th>
+                          <th className="border px-3 py-2 text-left font-semibold">National ID</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedHousehold.members?.map((member: any) => {
+                          const age = member.dateOfBirth 
+                            ? Math.floor((new Date().getTime() - new Date(member.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+                            : '—';
+                          return (
+                            <tr key={member.id} className="hover:bg-muted/30">
+                              <td className="border px-3 py-2">
+                                {member.firstName} {member.lastName}
+                                {member.isHead && <Badge variant="outline" className="ml-2 text-xs">Head</Badge>}
+                              </td>
+                              <td className="border px-3 py-2 capitalize">{member.relationshipToHead?.replace(/_/g, ' ') || '—'}</td>
+                              <td className="border px-3 py-2 capitalize">{member.gender}</td>
+                              <td className="border px-3 py-2">{age}</td>
+                              <td className="border px-3 py-2">{member.nationalId || '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                
+                {/* Assessment Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">Assessment Information</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Recommendation:</span>
+                      <p className="font-medium capitalize">{selectedHousehold.recommendation || '—'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Amount Allocation:</span>
+                      <p className="font-medium">{selectedHousehold.amountAllocation ? `$${parseFloat(selectedHousehold.amountAllocation).toLocaleString()}` : '—'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Duration:</span>
+                      <p className="font-medium">{selectedHousehold.durationMonths ? `${selectedHousehold.durationMonths} months` : '—'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Transfer Modality:</span>
+                      <p className="font-medium capitalize">{selectedHousehold.transferModality?.replace(/_/g, ' ') || '—'}</p>
+                    </div>
+                  </div>
+                  {selectedHousehold.assessmentNotes && (
+                    <div>
+                      <span className="text-muted-foreground text-sm">Assessment Notes:</span>
+                      <p className="mt-1 p-3 bg-muted/30 rounded text-sm whitespace-pre-wrap">{selectedHousehold.assessmentNotes}</p>
+                    </div>
+                  )}
+                  {selectedHousehold.householdAssets && (
+                    <div>
+                      <span className="text-muted-foreground text-sm">Household Assets:</span>
+                      <p className="mt-1 p-3 bg-muted/30 rounded text-sm whitespace-pre-wrap">{selectedHousehold.householdAssets}</p>
+                    </div>
+                  )}
+                  {selectedHousehold.complementaryActivities && (
+                    <div>
+                      <span className="text-muted-foreground text-sm">Complementary Activities:</span>
+                      <p className="mt-1 p-3 bg-muted/30 rounded text-sm whitespace-pre-wrap">{selectedHousehold.complementaryActivities}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setFullApplicationOpen(false)}>
+                Close
               </Button>
             </DialogFooter>
           </DialogContent>
