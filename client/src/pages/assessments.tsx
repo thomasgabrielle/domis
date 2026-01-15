@@ -99,7 +99,7 @@ export function Assessments() {
         householdUpdate.ministerComments = comments;
         // When Minister completes, set final program status
         if (decision !== 'requires_further_info') {
-          householdUpdate.programStatus = decision === 'agree' ? 'enrolled' : 'ineligible';
+          householdUpdate.programStatus = 'enrolled';
         }
       }
       

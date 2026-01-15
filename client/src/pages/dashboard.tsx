@@ -231,7 +231,7 @@ export function Dashboard() {
                           className={hh.programStatus === 'enrolled' ? 'bg-accent text-accent-foreground' : ''}
                           data-testid={`badge-status-${hh.id}`}
                         >
-                          {hh.programStatus === 'enrolled' ? 'Enrolled' : hh.programStatus === 'pending_assessment' ? 'Pending Assessment' : hh.programStatus === 'ineligible' ? 'Ineligible' : hh.programStatus}
+                          {hh.programStatus === 'enrolled' ? 'Enrolled' : hh.programStatus === 'pending_assessment' ? 'Pending Assessment' : hh.programStatus?.replace(/_/g, ' ')}
                         </Badge>
                       </TableCell>
                       <TableCell>

@@ -124,10 +124,18 @@ export function Registry() {
         return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Enrolled</Badge>;
       case 'pending_assessment':
         return <Badge className="bg-amber-100 text-amber-800 border-amber-200">Pending</Badge>;
-      case 'ineligible':
-        return <Badge className="bg-destructive/10 text-destructive border-destructive/20">Ineligible</Badge>;
+      case 'pending_additional_info':
+        return <Badge className="bg-orange-100 text-orange-800 border-orange-200">Pending Info</Badge>;
+      case 'pending_coordinator':
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Pending Coord.</Badge>;
+      case 'pending_director':
+        return <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200">Pending Dir.</Badge>;
+      case 'pending_ps':
+        return <Badge className="bg-purple-100 text-purple-800 border-purple-200">Pending PS</Badge>;
+      case 'pending_minister':
+        return <Badge className="bg-violet-100 text-violet-800 border-violet-200">Pending Min.</Badge>;
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="secondary">{status?.replace(/_/g, ' ')}</Badge>;
     }
   };
 

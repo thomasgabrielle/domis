@@ -125,6 +125,8 @@ export function Worksheet() {
     switch (status) {
       case 'pending_assessment':
         return <Badge className="bg-amber-100 text-amber-800 border-amber-200">Pending Assessment</Badge>;
+      case 'pending_additional_info':
+        return <Badge className="bg-orange-100 text-orange-800 border-orange-200">Pending Additional Info</Badge>;
       case 'pending_coordinator':
         return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Pending Coordinator</Badge>;
       case 'pending_director':
@@ -223,6 +225,7 @@ export function Worksheet() {
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="pending_assessment">Pending Assessment</SelectItem>
+                  <SelectItem value="pending_additional_info">Pending Additional Info</SelectItem>
                   <SelectItem value="pending_coordinator">Pending Coordinator</SelectItem>
                   <SelectItem value="pending_director">Pending Director</SelectItem>
                   <SelectItem value="pending_ps">Pending Perm. Secretary</SelectItem>
