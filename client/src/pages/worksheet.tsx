@@ -60,8 +60,12 @@ export function Worksheet() {
     data.household && !data.household.assessmentStep
   );
 
-  // Derive display status based on workflow step
+  // Derive display status based on workflow step and programStatus
   const getDisplayStatus = (household: any) => {
+    // Check if marked as pending additional info
+    if (household.programStatus === 'pending_additional_info') {
+      return 'pending_additional_info';
+    }
     // If no assessment step set, it's pending assessment (just completed intake)
     if (!household.assessmentStep) {
       return 'pending_assessment';

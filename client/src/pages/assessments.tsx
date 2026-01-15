@@ -84,6 +84,11 @@ export function Assessments() {
         assessmentStep: nextStep,
       };
       
+      // If requires further info, set the programStatus to track this
+      if (decision === 'requires_further_info') {
+        householdUpdate.programStatus = 'pending_additional_info';
+      }
+      
       // Set step-specific decision and comments using the correct field names
       if (currentStep === 'coordinator') {
         householdUpdate.coordinatorDecision = decision;
