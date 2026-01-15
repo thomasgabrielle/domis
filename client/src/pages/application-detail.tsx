@@ -170,6 +170,8 @@ export function ApplicationDetail() {
         return <Badge className="bg-purple-100 text-purple-800 border-purple-200">Pending Perm. Secretary</Badge>;
       case 'pending_minister':
         return <Badge className="bg-violet-100 text-violet-800 border-violet-200">Pending Minister</Badge>;
+      case 'rejected':
+        return <Badge className="bg-destructive/10 text-destructive border-destructive/20">Rejected</Badge>;
       default:
         return <Badge variant="secondary">{status?.replace(/_/g, ' ')}</Badge>;
     }

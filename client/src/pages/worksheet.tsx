@@ -77,7 +77,7 @@ export function Worksheet() {
       case 'minister':
         return 'pending_minister';
       case 'completed':
-        return 'enrolled';
+        return household.programStatus === 'rejected' ? 'rejected' : 'enrolled';
       default:
         return household.programStatus || 'pending_assessment';
     }
@@ -137,6 +137,8 @@ export function Worksheet() {
         return <Badge className="bg-violet-100 text-violet-800 border-violet-200">Pending Minister</Badge>;
       case 'enrolled':
         return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Enrolled</Badge>;
+      case 'rejected':
+        return <Badge className="bg-destructive/10 text-destructive border-destructive/20">Rejected</Badge>;
       default:
         return <Badge variant="secondary">{status?.replace(/_/g, ' ')}</Badge>;
     }
@@ -231,6 +233,7 @@ export function Worksheet() {
                   <SelectItem value="pending_ps">Pending Perm. Secretary</SelectItem>
                   <SelectItem value="pending_minister">Pending Minister</SelectItem>
                   <SelectItem value="enrolled">Enrolled</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={regionFilter} onValueChange={setRegionFilter}>
