@@ -60,6 +60,29 @@ export function Worksheet() {
     data.household && !data.household.assessmentStep
   );
 
+  // Derive display status based on workflow step
+  const getDisplayStatus = (household: any) => {
+    // If no assessment step set, it's pending assessment (just completed intake)
+    if (!household.assessmentStep) {
+      return 'pending_assessment';
+    }
+    // Map assessmentStep to display status
+    switch (household.assessmentStep) {
+      case 'coordinator':
+        return 'pending_coordinator';
+      case 'director':
+        return 'pending_director';
+      case 'permanent_secretary':
+        return 'pending_ps';
+      case 'minister':
+        return 'pending_minister';
+      case 'completed':
+        return 'enrolled';
+      default:
+        return household.programStatus || 'pending_assessment';
+    }
+  };
+
   // Create one row per application (household), not per member
   const applications: ApplicationRow[] = applicationsInModule.map((data: any) => {
     if (!data.household) return null;
@@ -75,7 +98,7 @@ export function Worksheet() {
       region: data.household.province,
       district: data.household.district,
       village: data.household.village,
-      status: data.household.programStatus,
+      status: getDisplayStatus(data.household),
       registrationDate: data.household.registrationDate,
     };
   }).filter(Boolean) as ApplicationRow[];
@@ -100,14 +123,20 @@ export function Worksheet() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'enrolled':
-        return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Enrolled</Badge>;
       case 'pending_assessment':
         return <Badge className="bg-amber-100 text-amber-800 border-amber-200">Pending Assessment</Badge>;
-      case 'ineligible':
-        return <Badge className="bg-destructive/10 text-destructive border-destructive/20">Ineligible</Badge>;
+      case 'pending_coordinator':
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Pending Coordinator</Badge>;
+      case 'pending_director':
+        return <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200">Pending Director</Badge>;
+      case 'pending_ps':
+        return <Badge className="bg-purple-100 text-purple-800 border-purple-200">Pending Perm. Secretary</Badge>;
+      case 'pending_minister':
+        return <Badge className="bg-violet-100 text-violet-800 border-violet-200">Pending Minister</Badge>;
+      case 'enrolled':
+        return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Enrolled</Badge>;
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="secondary">{status?.replace(/_/g, ' ')}</Badge>;
     }
   };
 
@@ -165,9 +194,9 @@ export function Worksheet() {
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <p className="text-sm font-medium text-muted-foreground">Ineligible</p>
-              <p className="text-2xl font-bold text-destructive" data-testid="text-ineligible-count">
-                {applications.filter(a => a.status === 'ineligible').length}
+              <p className="text-sm font-medium text-muted-foreground">In Workflow</p>
+              <p className="text-2xl font-bold text-blue-600" data-testid="text-workflow-count">
+                {applications.filter(a => ['pending_coordinator', 'pending_director', 'pending_ps', 'pending_minister'].includes(a.status)).length}
               </p>
             </CardContent>
           </Card>
@@ -193,9 +222,12 @@ export function Worksheet() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="enrolled">Enrolled</SelectItem>
                   <SelectItem value="pending_assessment">Pending Assessment</SelectItem>
-                  <SelectItem value="ineligible">Ineligible</SelectItem>
+                  <SelectItem value="pending_coordinator">Pending Coordinator</SelectItem>
+                  <SelectItem value="pending_director">Pending Director</SelectItem>
+                  <SelectItem value="pending_ps">Pending Perm. Secretary</SelectItem>
+                  <SelectItem value="pending_minister">Pending Minister</SelectItem>
+                  <SelectItem value="enrolled">Enrolled</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={regionFilter} onValueChange={setRegionFilter}>
