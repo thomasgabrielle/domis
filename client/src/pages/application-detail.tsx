@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Pencil, ClipboardCheck, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Pencil, ClipboardCheck, Save, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { useState, useEffect } from "react";

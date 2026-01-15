@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, XCircle, FileCheck, Clock, ArrowRight, AlertCircle, User, Users } from "lucide-react";
+import { CheckCircle2, XCircle, FileCheck, Clock, ArrowRight, AlertCircle, User, Users, Save, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
@@ -138,6 +138,65 @@ export function Assessments() {
       });
     },
   });
+
+  // Save only - stores decision/comments without progressing to next step
+  const saveOnlyMutation = useMutation({
+    mutationFn: async ({ householdId, decision, comments, currentStep }: { 
+      householdId: string; 
+      decision: 'agree' | 'disagree' | 'requires_further_info';
+      comments: string;
+      currentStep: WorkflowStep;
+    }) => {
+      // Build the household update object - no assessmentStep change
+      const householdUpdate: Record<string, any> = {};
+      
+      // Set step-specific decision and comments
+      if (currentStep === 'coordinator') {
+        householdUpdate.coordinatorDecision = decision;
+        householdUpdate.coordinatorComments = comments;
+      } else if (currentStep === 'director') {
+        householdUpdate.directorDecision = decision;
+        householdUpdate.directorComments = comments;
+      } else if (currentStep === 'permanent_secretary') {
+        householdUpdate.permanentSecretaryDecision = decision;
+        householdUpdate.permanentSecretaryComments = comments;
+      } else if (currentStep === 'minister') {
+        householdUpdate.ministerDecision = decision;
+        householdUpdate.ministerComments = comments;
+      }
+      
+      return apiRequest("PUT", `/api/households/${householdId}`, {
+        household: householdUpdate,
+        members: [],
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/households-with-members'] });
+      toast({
+        title: "Saved",
+        description: "Your changes have been saved.",
+      });
+      setReviewDialogOpen(false);
+      setSelectedHousehold(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveOnly = () => {
+    if (!selectedHousehold) return;
+    saveOnlyMutation.mutate({
+      householdId: selectedHousehold.id,
+      decision,
+      comments,
+      currentStep,
+    });
+  };
 
   const handleOpenReview = (household: any, step: WorkflowStep) => {
     setSelectedHousehold(household);
@@ -453,7 +512,7 @@ export function Assessments() {
               )}
             </div>
             
-            <DialogFooter>
+            <DialogFooter className="flex gap-2">
               <Button type="button" variant="outline" onClick={() => {
                 setReviewDialogOpen(false);
                 setSelectedHousehold(null);
@@ -461,16 +520,40 @@ export function Assessments() {
                 Cancel
               </Button>
               <Button 
+                variant="outline"
+                onClick={handleSaveOnly}
+                disabled={saveOnlyMutation.isPending || progressAssessmentMutation.isPending}
+                data-testid="button-save-only"
+                className="gap-2"
+              >
+                {saveOnlyMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Save
+              </Button>
+              <Button 
                 onClick={handleSubmitReview}
-                disabled={progressAssessmentMutation.isPending}
-                className={
+                disabled={saveOnlyMutation.isPending || progressAssessmentMutation.isPending}
+                className={`gap-2 ${
                   decision === 'agree' ? 'bg-emerald-600 hover:bg-emerald-700' :
                   decision === 'disagree' ? 'bg-red-600 hover:bg-red-700' :
                   'bg-amber-600 hover:bg-amber-700'
-                }
+                }`}
                 data-testid="button-submit-review"
               >
-                {progressAssessmentMutation.isPending ? "Saving..." : "Save Decision"}
+                {progressAssessmentMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowRight className="h-4 w-4" />
+                )}
+                {(() => {
+                  if (decision === 'requires_further_info') return 'Save and Return to Applications';
+                  const stepConfig = WORKFLOW_STEPS.find(s => s.id === currentStep);
+                  const nextStepConfig = WORKFLOW_STEPS.find(s => s.id === stepConfig?.nextStep);
+                  return nextStepConfig ? `Save and Send to ${nextStepConfig.label}` : 'Save and Complete';
+                })()}
               </Button>
             </DialogFooter>
           </DialogContent>
