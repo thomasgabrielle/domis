@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, XCircle, FileCheck, Clock, ArrowRight, AlertCircle, User, Users, Save, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, FileCheck, Clock, ArrowRight, AlertCircle, User, Users, Save, Loader2, MapPin, Calendar } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Link } from "wouter";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const WORKFLOW_STEPS = [
   { id: 'coordinator', label: 'Coordinator', nextStep: 'director' },
@@ -217,18 +219,36 @@ export function Assessments() {
     });
   };
 
-  const getDecisionBadge = (decision: string | null) => {
+  const getDecisionBadge = (decision: string | null, stepLabel?: string) => {
     if (!decision) return null;
+    const label = stepLabel ? `${stepLabel}: ` : '';
     switch (decision) {
       case 'agree':
-        return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Agreed</Badge>;
+        return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">{label}Agreed</Badge>;
       case 'disagree':
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Disagreed</Badge>;
+        return <Badge className="bg-red-100 text-red-800 border-red-200">{label}Disagreed</Badge>;
       case 'requires_further_info':
-        return <Badge className="bg-amber-100 text-amber-800 border-amber-200">More Info Needed</Badge>;
+        return <Badge className="bg-amber-100 text-amber-800 border-amber-200">{label}More Info</Badge>;
       default:
         return null;
     }
+  };
+
+  const getStepDecisions = (household: any) => {
+    const decisions = [];
+    if (household.coordinatorDecision) {
+      decisions.push({ step: 'Coordinator', decision: household.coordinatorDecision, comments: household.coordinatorComments });
+    }
+    if (household.directorDecision) {
+      decisions.push({ step: 'Director', decision: household.directorDecision, comments: household.directorComments });
+    }
+    if (household.permanentSecretaryDecision) {
+      decisions.push({ step: 'Perm. Secretary', decision: household.permanentSecretaryDecision, comments: household.permanentSecretaryComments });
+    }
+    if (household.ministerDecision) {
+      decisions.push({ step: 'Minister', decision: household.ministerDecision, comments: household.ministerComments });
+    }
+    return decisions;
   };
 
   const getPrimaryApplicant = (household: any) => {
