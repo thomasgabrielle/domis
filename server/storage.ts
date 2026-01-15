@@ -227,6 +227,9 @@ export class DatabaseStorage implements IStorage {
     if (householdData.complementaryActivities !== undefined) updateData.complementaryActivities = householdData.complementaryActivities || null;
     if (householdData.recommendationComments !== undefined) updateData.recommendationComments = householdData.recommendationComments || null;
     
+    // Assessment workflow step
+    if (householdData.assessmentStep !== undefined) updateData.assessmentStep = householdData.assessmentStep || null;
+    
     if (householdData.proxyFirstName !== undefined) updateData.proxyFirstName = householdData.proxyFirstName || null;
     if (householdData.proxyLastName !== undefined) updateData.proxyLastName = householdData.proxyLastName || null;
     if (householdData.proxyAlias !== undefined) updateData.proxyAlias = householdData.proxyAlias || null;

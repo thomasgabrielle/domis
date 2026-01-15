@@ -96,6 +96,9 @@ export const households = pgTable("households", {
   complementaryActivities: text("complementary_activities"),
   recommendationComments: text("recommendation_comments"),
   
+  // Assessment Workflow Step (for Assessments & Recommendations module)
+  assessmentStep: text("assessment_step"), // null = in Applications, coordinator, director, permanent_secretary, minister, completed
+  
   // Status
   programStatus: text("program_status").notNull().default("pending_assessment"),
   enrollmentDate: timestamp("enrollment_date"),
