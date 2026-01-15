@@ -38,6 +38,7 @@ export interface IStorage {
   getHousehold(id: string): Promise<Household | undefined>;
   getHouseholdWithMembers(id: string): Promise<{ household: Household; members: HouseholdMember[] } | undefined>;
   getAllHouseholds(): Promise<Household[]>;
+  getAllHouseholdsWithMembers(): Promise<{ household: Household; members: HouseholdMember[] }[]>;
   updateHouseholdStatus(id: string, status: string): Promise<void>;
   updateHouseholdVulnerabilityScore(id: string, score: number): Promise<void>;
   updateHousehold(id: string, householdData: Partial<InsertHousehold>, membersData: any[]): Promise<{ household: Household; members: HouseholdMember[] }>;
@@ -178,6 +179,24 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(households).orderBy(desc(households.createdAt));
   }
 
+  async getAllHouseholdsWithMembers(): Promise<{ household: Household; members: HouseholdMember[] }[]> {
+    const allHouseholds = await db.select().from(households).orderBy(desc(households.createdAt));
+    const allMembers = await db.select().from(householdMembers);
+    
+    const membersByHouseholdId = new Map<string, HouseholdMember[]>();
+    for (const member of allMembers) {
+      if (!membersByHouseholdId.has(member.householdId)) {
+        membersByHouseholdId.set(member.householdId, []);
+      }
+      membersByHouseholdId.get(member.householdId)!.push(member);
+    }
+    
+    return allHouseholds.map(household => ({
+      household,
+      members: membersByHouseholdId.get(household.id) || []
+    }));
+  }
+
   async updateHouseholdStatus(id: string, status: string): Promise<void> {
     await db.update(households)
       .set({ 
@@ -229,6 +248,19 @@ export class DatabaseStorage implements IStorage {
     
     // Assessment workflow step
     if (householdData.assessmentStep !== undefined) updateData.assessmentStep = householdData.assessmentStep || null;
+    
+    // Step-specific decisions and comments
+    if ((householdData as any).coordinatorDecision !== undefined) updateData.coordinatorDecision = (householdData as any).coordinatorDecision || null;
+    if ((householdData as any).coordinatorComments !== undefined) updateData.coordinatorComments = (householdData as any).coordinatorComments || null;
+    if ((householdData as any).directorDecision !== undefined) updateData.directorDecision = (householdData as any).directorDecision || null;
+    if ((householdData as any).directorComments !== undefined) updateData.directorComments = (householdData as any).directorComments || null;
+    if ((householdData as any).permanentSecretaryDecision !== undefined) updateData.permanentSecretaryDecision = (householdData as any).permanentSecretaryDecision || null;
+    if ((householdData as any).permanentSecretaryComments !== undefined) updateData.permanentSecretaryComments = (householdData as any).permanentSecretaryComments || null;
+    if ((householdData as any).ministerDecision !== undefined) updateData.ministerDecision = (householdData as any).ministerDecision || null;
+    if ((householdData as any).ministerComments !== undefined) updateData.ministerComments = (householdData as any).ministerComments || null;
+    
+    // Update programStatus if assessment workflow is completed
+    if (householdData.programStatus !== undefined) updateData.programStatus = householdData.programStatus;
     
     if (householdData.proxyFirstName !== undefined) updateData.proxyFirstName = householdData.proxyFirstName || null;
     if (householdData.proxyLastName !== undefined) updateData.proxyLastName = householdData.proxyLastName || null;

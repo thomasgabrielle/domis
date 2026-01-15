@@ -99,6 +99,16 @@ export const households = pgTable("households", {
   // Assessment Workflow Step (for Assessments & Recommendations module)
   assessmentStep: text("assessment_step"), // null = in Applications, coordinator, director, permanent_secretary, minister, completed
   
+  // Step-specific decisions and comments
+  coordinatorDecision: text("coordinator_decision"), // agree, disagree, requires_further_info
+  coordinatorComments: text("coordinator_comments"),
+  directorDecision: text("director_decision"),
+  directorComments: text("director_comments"),
+  permanentSecretaryDecision: text("permanent_secretary_decision"),
+  permanentSecretaryComments: text("permanent_secretary_comments"),
+  ministerDecision: text("minister_decision"),
+  ministerComments: text("minister_comments"),
+  
   // Status
   programStatus: text("program_status").notNull().default("pending_assessment"),
   enrollmentDate: timestamp("enrollment_date"),

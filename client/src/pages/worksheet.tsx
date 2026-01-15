@@ -55,8 +55,14 @@ export function Worksheet() {
     },
   });
 
+  // Filter out households that have been moved to Assessments & Recommendations module
+  // (those with assessmentStep set)
+  const applicationsInModule = allMembers.filter((data: any) => 
+    data.household && !data.household.assessmentStep
+  );
+
   // Flatten all members into applicant rows
-  const applicants: ApplicantRow[] = allMembers.flatMap((data: any) => {
+  const applicants: ApplicantRow[] = applicationsInModule.flatMap((data: any) => {
     if (!data.members || !data.household) return [];
     return data.members.map((member: any) => ({
       id: member.id,

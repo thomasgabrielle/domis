@@ -89,6 +89,16 @@ export async function registerRoutes(
     }
   });
 
+  // Get all households with members (for assessments workflow)
+  app.get("/api/households-with-members", async (req, res) => {
+    try {
+      const householdsWithMembers = await storage.getAllHouseholdsWithMembers();
+      res.json(householdsWithMembers);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get single household with members
   app.get("/api/households/:id", async (req, res) => {
     try {
