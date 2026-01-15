@@ -116,6 +116,8 @@ export function Assessments() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/households-with-members'] });
       queryClient.invalidateQueries({ queryKey: ['/api/households'] });
+      queryClient.invalidateQueries({ queryKey: ['households'] });
+      queryClient.invalidateQueries({ queryKey: ['all-members'] });
       
       if (variables.decision === 'requires_further_info') {
         toast({
@@ -180,6 +182,9 @@ export function Assessments() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/households-with-members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/households'] });
+      queryClient.invalidateQueries({ queryKey: ['households'] });
+      queryClient.invalidateQueries({ queryKey: ['all-members'] });
       toast({
         title: "Saved",
         description: "Your changes have been saved.",
