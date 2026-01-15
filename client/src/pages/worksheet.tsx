@@ -10,20 +10,19 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation } from "wouter";
 
-type ApplicantRow = {
+type ApplicationRow = {
   id: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth: string;
-  gender: string;
-  relationshipToHead: string;
-  nationalId: string | null;
+  applicationId: string;
+  householdCode: string;
+  headFirstName: string;
+  headLastName: string;
+  headNationalId: string | null;
+  memberCount: number;
   region: string;
   district: string;
+  village: string;
   status: string;
-  householdId: string;
-  householdCode: string;
-  applicationId: string;
+  registrationDate: string | null;
 };
 
 export function Worksheet() {
@@ -55,48 +54,49 @@ export function Worksheet() {
     },
   });
 
-  // Filter out households that have been moved to Assessments & Recommendations module
+  // Filter out households that have been moved to Recommendations module
   // (those with assessmentStep set)
   const applicationsInModule = allMembers.filter((data: any) => 
     data.household && !data.household.assessmentStep
   );
 
-  // Flatten all members into applicant rows
-  const applicants: ApplicantRow[] = applicationsInModule.flatMap((data: any) => {
-    if (!data.members || !data.household) return [];
-    return data.members.map((member: any) => ({
-      id: member.id,
-      firstName: member.firstName,
-      lastName: member.lastName,
-      dateOfBirth: member.dateOfBirth,
-      gender: member.gender,
-      relationshipToHead: member.relationshipToHead,
-      nationalId: member.nationalId,
+  // Create one row per application (household), not per member
+  const applications: ApplicationRow[] = applicationsInModule.map((data: any) => {
+    if (!data.household) return null;
+    const head = data.members?.find((m: any) => m.isHead) || data.members?.[0];
+    return {
+      id: data.household.id,
+      applicationId: data.household.applicationId || data.household.householdCode,
+      householdCode: data.household.householdCode,
+      headFirstName: head?.firstName || '—',
+      headLastName: head?.lastName || '—',
+      headNationalId: head?.nationalId || null,
+      memberCount: data.members?.length || 0,
       region: data.household.province,
       district: data.household.district,
+      village: data.household.village,
       status: data.household.programStatus,
-      householdId: data.household.id,
-      householdCode: data.household.householdCode,
-      applicationId: data.household.applicationId || data.household.householdCode,
-    }));
-  });
+      registrationDate: data.household.registrationDate,
+    };
+  }).filter(Boolean) as ApplicationRow[];
 
   // Apply filters
-  const filteredApplicants = applicants.filter((applicant) => {
+  const filteredApplications = applications.filter((app) => {
     const matchesSearch = 
-      applicant.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      applicant.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (applicant.nationalId && applicant.nationalId.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      applicant.applicationId.toLowerCase().includes(searchTerm.toLowerCase());
+      app.headFirstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.headLastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (app.headNationalId && app.headNationalId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      app.applicationId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.householdCode.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === "all" || applicant.status === statusFilter;
-    const matchesRegion = regionFilter === "all" || applicant.region === regionFilter;
+    const matchesStatus = statusFilter === "all" || app.status === statusFilter;
+    const matchesRegion = regionFilter === "all" || app.region === regionFilter;
     
     return matchesSearch && matchesStatus && matchesRegion;
   });
 
   // Get unique regions for filter
-  const uniqueRegions = Array.from(new Set(applicants.map(a => a.region)));
+  const uniqueRegions = Array.from(new Set(applications.map(a => a.region)));
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -119,18 +119,6 @@ export function Worksheet() {
     }
   };
 
-  const formatRelationship = (rel: string) => {
-    const labels: Record<string, string> = {
-      head: 'Head of Household',
-      spouse: 'Spouse',
-      child: 'Child',
-      parent: 'Parent',
-      sibling: 'Sibling',
-      other: 'Other Relative',
-    };
-    return labels[rel] || rel;
-  };
-
   return (
     <div className="min-h-screen bg-background font-sans pb-12">
       <Navbar />
@@ -139,7 +127,7 @@ export function Worksheet() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-heading font-bold text-foreground">Applications</h1>
-            <p className="text-muted-foreground">Complete list of all registered applicants across households.</p>
+            <p className="text-muted-foreground">Complete list of all registered applications awaiting assessment.</p>
           </div>
           <Button variant="outline" className="gap-2" data-testid="button-export">
             <Download className="h-4 w-4" /> Export to CSV
@@ -154,8 +142,8 @@ export function Worksheet() {
                 <Users className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Applicants</p>
-                <p className="text-2xl font-bold" data-testid="text-total-count">{applicants.length}</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Applications</p>
+                <p className="text-2xl font-bold" data-testid="text-total-count">{applications.length}</p>
               </div>
             </CardContent>
           </Card>
@@ -163,7 +151,7 @@ export function Worksheet() {
             <CardContent className="pt-6">
               <p className="text-sm font-medium text-muted-foreground">Enrolled</p>
               <p className="text-2xl font-bold text-emerald-600" data-testid="text-enrolled-count">
-                {applicants.filter(a => a.status === 'enrolled').length}
+                {applications.filter(a => a.status === 'enrolled').length}
               </p>
             </CardContent>
           </Card>
@@ -171,7 +159,7 @@ export function Worksheet() {
             <CardContent className="pt-6">
               <p className="text-sm font-medium text-muted-foreground">Pending Assessment</p>
               <p className="text-2xl font-bold text-amber-600" data-testid="text-pending-count">
-                {applicants.filter(a => a.status === 'pending_assessment').length}
+                {applications.filter(a => a.status === 'pending_assessment').length}
               </p>
             </CardContent>
           </Card>
@@ -179,7 +167,7 @@ export function Worksheet() {
             <CardContent className="pt-6">
               <p className="text-sm font-medium text-muted-foreground">Ineligible</p>
               <p className="text-2xl font-bold text-destructive" data-testid="text-ineligible-count">
-                {applicants.filter(a => a.status === 'ineligible').length}
+                {applications.filter(a => a.status === 'ineligible').length}
               </p>
             </CardContent>
           </Card>
@@ -225,22 +213,22 @@ export function Worksheet() {
           </CardContent>
         </Card>
 
-        {/* Applicants Table */}
+        {/* Applications Table */}
         <Card>
           <CardHeader>
             <CardTitle>Applications</CardTitle>
             <CardDescription>
-              Showing {filteredApplicants.length} of {applicants.length} applicants
+              Showing {filteredApplications.length} of {applications.length} applications
             </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-12 text-muted-foreground">Loading applicants...</div>
-            ) : filteredApplicants.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">Loading applications...</div>
+            ) : filteredApplications.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                {applicants.length === 0 
-                  ? "No applicants registered yet. Register a household to see applicants here."
-                  : "No applicants match your search criteria."}
+                {applications.length === 0 
+                  ? "No applications registered yet. Register a household to see applications here."
+                  : "No applications match your search criteria."}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -248,55 +236,51 @@ export function Worksheet() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Application ID</TableHead>
-                      <TableHead>First Name</TableHead>
-                      <TableHead>Last Name</TableHead>
-                      <TableHead>Date of Birth</TableHead>
-                      <TableHead>Gender</TableHead>
-                      <TableHead>Relationship to Head</TableHead>
+                      <TableHead>Head of Household</TableHead>
                       <TableHead>National ID</TableHead>
+                      <TableHead>Members</TableHead>
                       <TableHead>Region</TableHead>
                       <TableHead>District</TableHead>
+                      <TableHead>Village</TableHead>
+                      <TableHead>Date Registered</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredApplicants.map((applicant) => (
+                    {filteredApplications.map((app) => (
                       <TableRow 
-                        key={applicant.id} 
-                        data-testid={`row-applicant-${applicant.id}`}
+                        key={app.id} 
+                        data-testid={`row-application-${app.id}`}
                         className="cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => setLocation(`/application/${applicant.householdId}`)}
+                        onClick={() => setLocation(`/application/${app.id}`)}
                       >
-                        <TableCell className="font-mono text-sm" data-testid={`text-applicationid-${applicant.id}`}>
-                          {applicant.applicationId}
+                        <TableCell className="font-mono text-sm" data-testid={`text-applicationid-${app.id}`}>
+                          {app.applicationId}
                         </TableCell>
-                        <TableCell className="font-medium" data-testid={`text-firstname-${applicant.id}`}>
-                          {applicant.firstName}
+                        <TableCell className="font-medium" data-testid={`text-head-${app.id}`}>
+                          {app.headFirstName} {app.headLastName}
                         </TableCell>
-                        <TableCell data-testid={`text-lastname-${applicant.id}`}>
-                          {applicant.lastName}
+                        <TableCell className="font-mono text-sm" data-testid={`text-nationalid-${app.id}`}>
+                          {app.headNationalId || '—'}
                         </TableCell>
-                        <TableCell data-testid={`text-dob-${applicant.id}`}>
-                          {formatDate(applicant.dateOfBirth)}
+                        <TableCell data-testid={`text-members-${app.id}`}>
+                          {app.memberCount}
                         </TableCell>
-                        <TableCell className="capitalize" data-testid={`text-gender-${applicant.id}`}>
-                          {applicant.gender}
+                        <TableCell data-testid={`text-region-${app.id}`}>
+                          {app.region}
                         </TableCell>
-                        <TableCell data-testid={`text-relationship-${applicant.id}`}>
-                          {formatRelationship(applicant.relationshipToHead)}
+                        <TableCell data-testid={`text-district-${app.id}`}>
+                          {app.district}
                         </TableCell>
-                        <TableCell className="font-mono text-sm" data-testid={`text-nationalid-${applicant.id}`}>
-                          {applicant.nationalId || '—'}
+                        <TableCell data-testid={`text-village-${app.id}`}>
+                          {app.village}
                         </TableCell>
-                        <TableCell data-testid={`text-region-${applicant.id}`}>
-                          {applicant.region}
+                        <TableCell data-testid={`text-date-${app.id}`}>
+                          {app.registrationDate ? formatDate(app.registrationDate) : '—'}
                         </TableCell>
-                        <TableCell data-testid={`text-district-${applicant.id}`}>
-                          {applicant.district}
-                        </TableCell>
-                        <TableCell data-testid={`badge-status-${applicant.id}`}>
-                          {getStatusBadge(applicant.status)}
+                        <TableCell data-testid={`badge-status-${app.id}`}>
+                          {getStatusBadge(app.status)}
                         </TableCell>
                         <TableCell>
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
