@@ -478,34 +478,6 @@ export function Registration() {
 
           </div>
         </form>
-
-        <AlertDialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Duplicate ID Found</AlertDialogTitle>
-              <AlertDialogDescription className="space-y-2">
-                <p>This National ID is already registered in the system.</p>
-                {duplicateResult?.member && (
-                  <div className="bg-muted p-3 rounded-md mt-2">
-                    <p className="font-medium">{duplicateResult.member.firstName} {duplicateResult.member.lastName}</p>
-                    {duplicateResult.household?.applicationId && (
-                      <p className="text-sm text-muted-foreground">Application: {duplicateResult.household.applicationId}</p>
-                    )}
-                  </div>
-                )}
-                <p className="mt-2">Would you like to add a new application for this existing client?</p>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={handleDuplicateReject}>
-                No, Enter Different ID
-              </AlertDialogCancel>
-              <AlertDialogAction onClick={handleDuplicateConfirm}>
-                Yes, Use Existing Client
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </main>
     </div>
   );
