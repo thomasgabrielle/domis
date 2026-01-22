@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Download, Filter, Search, Users, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -30,6 +32,7 @@ export function Worksheet() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [regionFilter, setRegionFilter] = useState("all");
+  const [includeEnrolled, setIncludeEnrolled] = useState(false);
 
   const { data: households = [], isLoading } = useQuery({
     queryKey: ['households'],
@@ -118,7 +121,10 @@ export function Worksheet() {
     const matchesStatus = statusFilter === "all" || app.status === statusFilter;
     const matchesRegion = regionFilter === "all" || app.region === regionFilter;
     
-    return matchesSearch && matchesStatus && matchesRegion;
+    // Exclude enrolled unless explicitly included
+    const matchesEnrolledFilter = includeEnrolled || app.status !== 'enrolled';
+    
+    return matchesSearch && matchesStatus && matchesRegion && matchesEnrolledFilter;
   });
 
   // Get unique regions for filter
@@ -250,6 +256,17 @@ export function Worksheet() {
                   ))}
                 </SelectContent>
               </Select>
+              <div className="flex items-center gap-2 bg-background border rounded-md px-3 py-2">
+                <Checkbox 
+                  id="include-enrolled" 
+                  checked={includeEnrolled} 
+                  onCheckedChange={(checked) => setIncludeEnrolled(checked === true)}
+                  data-testid="checkbox-include-enrolled"
+                />
+                <Label htmlFor="include-enrolled" className="text-sm cursor-pointer">
+                  Include Enrolled
+                </Label>
+              </div>
             </div>
           </CardContent>
         </Card>
