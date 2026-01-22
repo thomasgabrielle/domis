@@ -9,7 +9,8 @@ import {
   insertPaymentSchema,
   insertCaseActivitySchema,
   insertRoleSchema,
-  insertUserSchema
+  insertUserSchema,
+  insertWorkflowHistorySchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -530,6 +531,96 @@ export async function registerRoutes(
       res.json(permissions);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ===== WORKFLOW HISTORY =====
+
+  // Create workflow history entry
+  app.post("/api/workflow-history", async (req, res) => {
+    try {
+      const historyData = insertWorkflowHistorySchema.parse(req.body);
+      const history = await storage.createWorkflowHistory(historyData);
+      res.status(201).json(history);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get workflow history for a household
+  app.get("/api/workflow-history/household/:householdId", async (req, res) => {
+    try {
+      const history = await storage.getWorkflowHistoryForHousehold(req.params.householdId);
+      res.json(history);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get current cycle number for a household
+  app.get("/api/workflow-history/household/:householdId/cycle", async (req, res) => {
+    try {
+      const cycleNumber = await storage.getCurrentCycleNumber(req.params.householdId);
+      res.json({ cycleNumber });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Atomic workflow progression - creates history and updates household together
+  app.post("/api/workflow-progress/:householdId", async (req, res) => {
+    try {
+      const { householdId } = req.params;
+      const { step, decision, comments, nextStep, householdUpdate } = req.body;
+      
+      // Validate required fields
+      const validSteps = ['coordinator', 'director', 'permanent_secretary', 'minister'];
+      const validDecisions = ['agree', 'disagree', 'requires_further_info'];
+      
+      if (!validSteps.includes(step)) {
+        return res.status(400).json({ error: `Invalid step: ${step}. Must be one of: ${validSteps.join(', ')}` });
+      }
+      if (!validDecisions.includes(decision)) {
+        return res.status(400).json({ error: `Invalid decision: ${decision}. Must be one of: ${validDecisions.join(', ')}` });
+      }
+      
+      // Use atomic storage method
+      const updatedHousehold = await storage.progressWorkflow(
+        householdId,
+        step,
+        decision,
+        comments || null,
+        nextStep,
+        householdUpdate || {}
+      );
+      
+      res.json(updatedHousehold);
+    } catch (error: any) {
+      if (error.message === "Household not found") {
+        return res.status(404).json({ error: error.message });
+      }
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Atomic resubmission - sends application to coordinator with cycle increment if needed
+  app.post("/api/workflow-resubmit/:householdId", async (req, res) => {
+    try {
+      const { householdId } = req.params;
+      const { householdData } = req.body;
+      
+      // Use atomic storage method that checks status and increments cycle server-side
+      const updatedHousehold = await storage.resubmitToCoordinator(
+        householdId,
+        householdData || {}
+      );
+      
+      res.json(updatedHousehold);
+    } catch (error: any) {
+      if (error.message === "Household not found") {
+        return res.status(404).json({ error: error.message });
+      }
+      res.status(400).json({ error: error.message });
     }
   });
 

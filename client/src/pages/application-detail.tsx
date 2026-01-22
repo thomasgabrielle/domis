@@ -60,6 +60,16 @@ export function ApplicationDetail() {
     enabled: !!householdId,
   });
 
+  const { data: workflowHistory = [] } = useQuery({
+    queryKey: ['workflow-history', householdId],
+    queryFn: async () => {
+      const response = await fetch(`/api/workflow-history/household/${householdId}`);
+      if (!response.ok) throw new Error('Failed to fetch workflow history');
+      return response.json();
+    },
+    enabled: !!householdId,
+  });
+
   useEffect(() => {
     if (data?.household) {
       setAssessmentNotes(data.household.assessmentNotes || "");
@@ -99,11 +109,12 @@ export function ApplicationDetail() {
     },
   });
 
-  // Save and send to Coordinator
+  // Save and send to Coordinator (using atomic server-side resubmission)
   const sendToCoordinatorMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("PUT", `/api/households/${householdId}`, {
-        household: {
+      // Use atomic server-side endpoint that handles cycle increment logic
+      return apiRequest("POST", `/api/workflow-resubmit/${householdId}`, {
+        householdData: {
           assessmentNotes,
           householdAssets,
           recommendation,
@@ -112,14 +123,17 @@ export function ApplicationDetail() {
           transferModality,
           complementaryActivities,
           recommendationComments,
-          assessmentStep: 'coordinator', // Move to Recommendations module
-          programStatus: 'pending_assessment', // Clear any pending_additional_info status
         },
-        members: data?.members || [],
       });
     },
     onSuccess: () => {
-      toast({ title: "Sent to Coordinator", description: "Application moved to Recommendations for Coordinator review." });
+      const wasResubmission = data?.household?.programStatus === 'pending_additional_info';
+      toast({ 
+        title: wasResubmission ? "Resubmitted to Coordinator" : "Sent to Coordinator", 
+        description: wasResubmission 
+          ? "Application has been resubmitted with additional information for a new review cycle."
+          : "Application moved to Recommendations for Coordinator review." 
+      });
       queryClient.invalidateQueries({ queryKey: ['household', householdId] });
       queryClient.invalidateQueries({ queryKey: ['/api/households'] });
       queryClient.invalidateQueries({ queryKey: ['households'] });
@@ -829,6 +843,91 @@ export function ApplicationDetail() {
                   </div>
                 </AlertDescription>
               </Alert>
+            )}
+
+            {/* Workflow History Timeline - shows all previous review cycles */}
+            {workflowHistory.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">Review History</h3>
+                <div className="space-y-4">
+                  {(() => {
+                    // Group history by cycle number
+                    const groupedByCycle: Record<number, any[]> = {};
+                    workflowHistory.forEach((entry: any) => {
+                      const cycle = entry.cycleNumber || 1;
+                      if (!groupedByCycle[cycle]) groupedByCycle[cycle] = [];
+                      groupedByCycle[cycle].push(entry);
+                    });
+                    
+                    const cycles = Object.keys(groupedByCycle).map(Number).sort((a, b) => b - a);
+                    
+                    return cycles.map((cycleNum) => (
+                      <div key={cycleNum} className="border rounded-lg p-4 bg-muted/20">
+                        <h4 className="text-sm font-semibold text-primary mb-3">
+                          Review Cycle {cycleNum}
+                        </h4>
+                        <div className="space-y-3">
+                          {groupedByCycle[cycleNum]
+                            .sort((a: any, b: any) => new Date(b.reviewedAt).getTime() - new Date(a.reviewedAt).getTime())
+                            .map((entry: any) => {
+                              const stepLabels: Record<string, string> = {
+                                coordinator: 'Coordinator',
+                                director: 'Director',
+                                permanent_secretary: 'Permanent Secretary',
+                                minister: 'Minister'
+                              };
+                              const decisionColors: Record<string, string> = {
+                                agree: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+                                disagree: 'text-red-700 bg-red-50 border-red-200',
+                                requires_further_info: 'text-amber-700 bg-amber-50 border-amber-200'
+                              };
+                              const decisionLabels: Record<string, string> = {
+                                agree: 'Agreed',
+                                disagree: 'Disagreed',
+                                requires_further_info: 'Requested More Info'
+                              };
+                              
+                              return (
+                                <div key={entry.id} className="flex items-start gap-3 p-3 bg-background rounded border">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-medium">{stepLabels[entry.step] || entry.step}</span>
+                                      <span className={`text-xs px-2 py-0.5 rounded border ${decisionColors[entry.decision] || ''}`}>
+                                        {decisionLabels[entry.decision] || entry.decision}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {new Date(entry.reviewedAt).toLocaleString()}
+                                      </span>
+                                    </div>
+                                    {entry.comments && (
+                                      <p className="text-sm text-muted-foreground mt-1">{entry.comments}</p>
+                                    )}
+                                    {(entry.recommendation || entry.amountAllocation) && (
+                                      <div className="text-xs text-muted-foreground mt-2 flex gap-3 flex-wrap">
+                                        {entry.recommendation && (
+                                          <span>Recommendation: {entry.recommendation}</span>
+                                        )}
+                                        {entry.amountAllocation && (
+                                          <span>Amount: ${entry.amountAllocation}</span>
+                                        )}
+                                        {entry.durationMonths && (
+                                          <span>Duration: {entry.durationMonths} months</span>
+                                        )}
+                                        {entry.transferModality && (
+                                          <span>Modality: {entry.transferModality}</span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
             )}
 
             {/* Household Demographics */}

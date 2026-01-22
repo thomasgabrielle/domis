@@ -70,19 +70,18 @@ export function Assessments() {
   const completedApps = households.filter((h: any) => h.assessmentStep === 'completed');
 
   const progressAssessmentMutation = useMutation({
-    mutationFn: async ({ householdId, decision, comments, currentStep }: { 
+    mutationFn: async ({ householdId, decision, comments, currentStep, householdData }: { 
       householdId: string; 
       decision: 'agree' | 'disagree' | 'requires_further_info';
       comments: string;
       currentStep: WorkflowStep;
+      householdData: any;
     }) => {
       const stepConfig = WORKFLOW_STEPS.find(s => s.id === currentStep);
       const nextStep = decision === 'requires_further_info' ? null : stepConfig?.nextStep;
       
       // Build the household update object
-      const householdUpdate: Record<string, any> = {
-        assessmentStep: nextStep,
-      };
+      const householdUpdate: Record<string, any> = {};
       
       // If requires further info, set the programStatus to track this
       if (decision === 'requires_further_info') {
@@ -108,9 +107,13 @@ export function Assessments() {
         }
       }
       
-      return apiRequest("PUT", `/api/households/${householdId}`, {
-        household: householdUpdate,
-        members: [],
+      // Use atomic endpoint that creates history and updates household together
+      return apiRequest("POST", `/api/workflow-progress/${householdId}`, {
+        step: currentStep,
+        decision,
+        comments,
+        nextStep,
+        householdUpdate,
       });
     },
     onSuccess: (_, variables) => {
@@ -227,6 +230,7 @@ export function Assessments() {
       decision,
       comments,
       currentStep,
+      householdData: selectedHousehold,
     });
   };
 

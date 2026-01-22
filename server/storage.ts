@@ -4,7 +4,7 @@ import ws from "ws";
 import { eq, desc, and, ne, sql } from "drizzle-orm";
 import { 
   users, households, householdMembers, assessments, grievances, 
-  payments, programs, caseActivities, roles, permissions, rolePermissions,
+  payments, programs, caseActivities, roles, permissions, rolePermissions, workflowHistory,
   type User, type InsertUser,
   type Household, type InsertHousehold,
   type HouseholdMember, type InsertHouseholdMember,
@@ -16,6 +16,7 @@ import {
   type Role, type InsertRole,
   type Permission, type InsertPermission,
   type RolePermission, type InsertRolePermission,
+  type WorkflowHistory, type InsertWorkflowHistory,
 } from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
@@ -99,6 +100,13 @@ export interface IStorage {
   
   // Seed data
   seedRolesAndPermissions(): Promise<void>;
+  
+  // Workflow History
+  createWorkflowHistory(history: InsertWorkflowHistory): Promise<WorkflowHistory>;
+  getWorkflowHistoryForHousehold(householdId: string): Promise<WorkflowHistory[]>;
+  getCurrentCycleNumber(householdId: string): Promise<number>;
+  progressWorkflow(householdId: string, step: string, decision: string, comments: string | null, nextStep: string | null, householdUpdate: Record<string, any>): Promise<Household>;
+  resubmitToCoordinator(householdId: string, householdData: Record<string, any>): Promise<Household>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -248,6 +256,7 @@ export class DatabaseStorage implements IStorage {
     
     // Assessment workflow step
     if (householdData.assessmentStep !== undefined) updateData.assessmentStep = householdData.assessmentStep || null;
+    // Note: currentCycleNumber is NOT allowed via updateHousehold - it's managed by server-side workflow methods only
     
     // Step-specific decisions and comments
     if ((householdData as any).coordinatorDecision !== undefined) updateData.coordinatorDecision = (householdData as any).coordinatorDecision || null;
@@ -679,6 +688,124 @@ export class DatabaseStorage implements IStorage {
       }
       await this.setRolePermissions(role.id, permissionIds);
     }
+  }
+
+  // Workflow History
+  async createWorkflowHistory(history: InsertWorkflowHistory): Promise<WorkflowHistory> {
+    const result = await db.insert(workflowHistory).values(history).returning();
+    return result[0];
+  }
+
+  async getWorkflowHistoryForHousehold(householdId: string): Promise<WorkflowHistory[]> {
+    return db.select().from(workflowHistory)
+      .where(eq(workflowHistory.householdId, householdId))
+      .orderBy(desc(workflowHistory.reviewedAt));
+  }
+
+  async getCurrentCycleNumber(householdId: string): Promise<number> {
+    // Get cycle from household's persisted currentCycleNumber field
+    const household = await this.getHousehold(householdId);
+    return household?.currentCycleNumber || 1;
+  }
+
+  // Atomic workflow progression - creates history and updates household in a single transaction
+  async progressWorkflow(
+    householdId: string,
+    step: string,
+    decision: string,
+    comments: string | null,
+    nextStep: string | null,
+    householdUpdate: Record<string, any>
+  ): Promise<Household> {
+    // Get current household first
+    const household = await this.getHousehold(householdId);
+    if (!household) {
+      throw new Error("Household not found");
+    }
+    
+    const cycleNumber = household.currentCycleNumber || 1;
+    
+    // Use a true DB transaction to ensure atomicity
+    return await db.transaction(async (tx) => {
+      // Create workflow history entry
+      await tx.insert(workflowHistory).values({
+        householdId,
+        step,
+        cycleNumber,
+        decision,
+        comments,
+        recommendation: household.recommendation,
+        amountAllocation: household.amountAllocation ? String(household.amountAllocation) : null,
+        durationMonths: household.durationMonths,
+        transferModality: household.transferModality,
+        complementaryActivities: household.complementaryActivities,
+      });
+      
+      // Update household with new step and decision fields
+      const updateData: Partial<Household> = {};
+      
+      // Set assessment step
+      updateData.assessmentStep = nextStep;
+      
+      // Copy allowed fields from householdUpdate (whitelist approach)
+      if (householdUpdate.programStatus !== undefined) updateData.programStatus = householdUpdate.programStatus;
+      if (householdUpdate.coordinatorDecision !== undefined) updateData.coordinatorDecision = householdUpdate.coordinatorDecision;
+      if (householdUpdate.coordinatorComments !== undefined) updateData.coordinatorComments = householdUpdate.coordinatorComments;
+      if (householdUpdate.directorDecision !== undefined) updateData.directorDecision = householdUpdate.directorDecision;
+      if (householdUpdate.directorComments !== undefined) updateData.directorComments = householdUpdate.directorComments;
+      if (householdUpdate.permanentSecretaryDecision !== undefined) updateData.permanentSecretaryDecision = householdUpdate.permanentSecretaryDecision;
+      if (householdUpdate.permanentSecretaryComments !== undefined) updateData.permanentSecretaryComments = householdUpdate.permanentSecretaryComments;
+      if (householdUpdate.ministerDecision !== undefined) updateData.ministerDecision = householdUpdate.ministerDecision;
+      if (householdUpdate.ministerComments !== undefined) updateData.ministerComments = householdUpdate.ministerComments;
+      
+      const result = await tx.update(households)
+        .set(updateData)
+        .where(eq(households.id, householdId))
+        .returning();
+      
+      return result[0];
+    });
+  }
+
+  // Atomic resubmission - increments cycle and sends to coordinator
+  async resubmitToCoordinator(
+    householdId: string,
+    householdData: Record<string, any>
+  ): Promise<Household> {
+    // Get current household first
+    const household = await this.getHousehold(householdId);
+    if (!household) {
+      throw new Error("Household not found");
+    }
+    
+    // Only increment cycle if currently in pending_additional_info status
+    const isResubmission = household.programStatus === 'pending_additional_info';
+    const newCycleNumber = isResubmission 
+      ? (household.currentCycleNumber || 1) + 1 
+      : (household.currentCycleNumber || 1);
+    
+    const updateData: Partial<Household> = {
+      assessmentStep: 'coordinator',
+      programStatus: 'pending_assessment',
+      currentCycleNumber: newCycleNumber,
+    };
+    
+    // Copy allowed fields from householdData
+    if (householdData.assessmentNotes !== undefined) updateData.assessmentNotes = householdData.assessmentNotes;
+    if (householdData.householdAssets !== undefined) updateData.householdAssets = householdData.householdAssets;
+    if (householdData.recommendation !== undefined) updateData.recommendation = householdData.recommendation;
+    if (householdData.amountAllocation !== undefined) updateData.amountAllocation = householdData.amountAllocation;
+    if (householdData.durationMonths !== undefined) updateData.durationMonths = householdData.durationMonths;
+    if (householdData.transferModality !== undefined) updateData.transferModality = householdData.transferModality;
+    if (householdData.complementaryActivities !== undefined) updateData.complementaryActivities = householdData.complementaryActivities;
+    if (householdData.recommendationComments !== undefined) updateData.recommendationComments = householdData.recommendationComments;
+    
+    const result = await db.update(households)
+      .set(updateData)
+      .where(eq(households.id, householdId))
+      .returning();
+    
+    return result[0];
   }
 }
 

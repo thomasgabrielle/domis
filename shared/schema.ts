@@ -98,6 +98,7 @@ export const households = pgTable("households", {
   
   // Assessment Workflow Step (for Assessments & Recommendations module)
   assessmentStep: text("assessment_step"), // null = in Applications, coordinator, director, permanent_secretary, minister, completed
+  currentCycleNumber: integer("current_cycle_number").default(1), // Tracks current workflow review cycle
   
   // Step-specific decisions and comments
   coordinatorDecision: text("coordinator_decision"), // agree, disagree, requires_further_info
@@ -120,6 +121,32 @@ export const households = pgTable("households", {
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Workflow History - tracks all approval decisions with timestamps
+export const workflowHistory = pgTable("workflow_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  householdId: varchar("household_id").references(() => households.id, { onDelete: "cascade" }).notNull(),
+  
+  // Workflow step and cycle
+  step: text("step").notNull(), // coordinator, director, permanent_secretary, minister
+  cycleNumber: integer("cycle_number").notNull().default(1), // Which review cycle this belongs to
+  
+  // Decision details
+  decision: text("decision").notNull(), // agree, disagree, requires_further_info
+  comments: text("comments"),
+  
+  // Recommendation snapshot at time of decision
+  recommendation: text("recommendation"),
+  amountAllocation: numeric("amount_allocation", { precision: 10, scale: 2 }),
+  durationMonths: integer("duration_months"),
+  transferModality: text("transfer_modality"),
+  complementaryActivities: text("complementary_activities"),
+  
+  // Metadata
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const householdMembers = pgTable("household_members", {
@@ -318,6 +345,12 @@ export const insertCaseActivitySchema = createInsertSchema(caseActivities).omit(
   createdAt: true,
 });
 
+export const insertWorkflowHistorySchema = createInsertSchema(workflowHistory).omit({
+  id: true,
+  reviewedAt: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -351,3 +384,6 @@ export type Permission = typeof permissions.$inferSelect;
 
 export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
 export type RolePermission = typeof rolePermissions.$inferSelect;
+
+export type InsertWorkflowHistory = z.infer<typeof insertWorkflowHistorySchema>;
+export type WorkflowHistory = typeof workflowHistory.$inferSelect;
