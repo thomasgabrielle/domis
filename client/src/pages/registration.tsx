@@ -583,16 +583,18 @@ export function Registration() {
         <form onSubmit={handleSubmit}>
           <div className="space-y-6">
             
-            {/* Intake Information Section */}
+            {/* Card 1: Intake Information (includes Intake, Location, and Proxy) */}
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-primary" />
                   <CardTitle>Intake Information</CardTitle>
                 </div>
-                <CardDescription>Capture how this applicant reached the program.</CardDescription>
+                <CardDescription>Capture how this applicant reached the program, location details, and proxy information.</CardDescription>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CardContent className="space-y-8">
+                {/* Intake Details Sub-section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="intakeDate">Date of Intake</Label>
                   <Input 
@@ -707,19 +709,17 @@ export function Registration() {
                   </div>
                   <p className="text-xs text-muted-foreground">Supported: PDF, DOC, DOCX, JPG, PNG</p>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Location Section */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  <CardTitle>Location & Address</CardTitle>
                 </div>
-                <CardDescription>Geographic location of the household dwelling.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                {/* Location Sub-section */}
+                <Separator />
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <MapPin className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-semibold">Location & Address</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">Geographic location of the household dwelling.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="province">Province/Region</Label>
                   <Select 
@@ -791,20 +791,150 @@ export function Registration() {
                       <MapPin className="h-4 w-4" />
                     </Button>
                   </div>
+                  </div>
+                </div>
+
+                {/* Proxy Sub-section - Only shown when proxy is selected */}
+                {hasProxy && (
+                <>
+                <Separator />
+                <div className="animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center gap-2 mb-4">
+                    <UserCheck className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-semibold">Proxy Information</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">Enter the details of the person applying on behalf of the applicant.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="proxyFirstName">Proxy First Name</Label>
+                      <Input 
+                        id="proxyFirstName" 
+                        name="proxyFirstName" 
+                        placeholder="First name"
+                        data-testid="input-proxy-first-name" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="proxyLastName">Proxy Last Name</Label>
+                      <Input 
+                        id="proxyLastName" 
+                        name="proxyLastName" 
+                        placeholder="Last name"
+                        data-testid="input-proxy-last-name" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="proxyAlias">Proxy Alias</Label>
+                      <Input 
+                        id="proxyAlias" 
+                        name="proxyAlias" 
+                        placeholder="Alias / Nickname"
+                        data-testid="input-proxy-alias" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="proxyGender">Proxy Gender</Label>
+                      <Select name="proxyGender">
+                        <SelectTrigger id="proxyGender" data-testid="select-proxy-gender">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="proxyDateOfBirth">Proxy Date of Birth</Label>
+                      <Input 
+                        id="proxyDateOfBirth" 
+                        name="proxyDateOfBirth" 
+                        type="date"
+                        data-testid="input-proxy-dob" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="proxyNationalId">Proxy National ID</Label>
+                      <Input 
+                        id="proxyNationalId" 
+                        name="proxyNationalId" 
+                        placeholder="ID Number"
+                        data-testid="input-proxy-national-id" 
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="proxyAddress">Proxy Address</Label>
+                      <Input 
+                        id="proxyAddress" 
+                        name="proxyAddress" 
+                        placeholder="Full address"
+                        data-testid="input-proxy-address" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="proxyPhone">Proxy Phone</Label>
+                      <Input 
+                        id="proxyPhone" 
+                        name="proxyPhone" 
+                        type="tel"
+                        placeholder="Phone number"
+                        data-testid="input-proxy-phone" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="proxyRelationship">Proxy Relationship to Applicant</Label>
+                      <Select name="proxyRelationship">
+                        <SelectTrigger id="proxyRelationship" data-testid="select-proxy-relationship">
+                          <SelectValue placeholder="Select relationship" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="family">Family</SelectItem>
+                          <SelectItem value="friend">Friend</SelectItem>
+                          <SelectItem value="neighbor">Neighbor</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="proxyRole">Proxy Role</Label>
+                      <Input 
+                        id="proxyRole" 
+                        name="proxyRole" 
+                        placeholder="e.g., Caregiver, Legal Guardian"
+                        data-testid="input-proxy-role" 
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-3">
+                      <Label htmlFor="proxyReason">Reason for Proxy</Label>
+                      <Textarea 
+                        id="proxyReason" 
+                        name="proxyReason" 
+                        placeholder="Explain why a proxy is needed..."
+                        rows={2}
+                        data-testid="textarea-proxy-reason" 
+                      />
+                    </div>
+                  </div>
+                </div>
+                </>
+                )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Household Details Section */}
+            {/* Card 2: Household Details & Applicant Information */}
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <FileText className="h-5 w-5 text-primary" />
                   <CardTitle>Household Details</CardTitle>
                 </div>
-                <CardDescription>Information about the dwelling structure and assets.</CardDescription>
+                <CardDescription>Information about the dwelling structure, assets, and household members.</CardDescription>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CardContent className="space-y-8">
+                {/* Household Details Sub-section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="roofType">Roof Type</Label>
                   <Select 
@@ -867,149 +997,22 @@ export function Registration() {
                     ))}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+                </div>
 
-            {/* Proxy Information - Only shown when proxy is selected */}
-            {hasProxy && (
-            <Card className="animate-in fade-in slide-in-from-top-2">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <UserCheck className="h-5 w-5 text-primary" />
-                  <CardTitle>Proxy Information</CardTitle>
-                </div>
-                <CardDescription>Enter the details of the person applying on behalf of the applicant.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="proxyFirstName">Proxy First Name</Label>
-                  <Input 
-                    id="proxyFirstName" 
-                    name="proxyFirstName" 
-                    placeholder="First name"
-                    data-testid="input-proxy-first-name" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="proxyLastName">Proxy Last Name</Label>
-                  <Input 
-                    id="proxyLastName" 
-                    name="proxyLastName" 
-                    placeholder="Last name"
-                    data-testid="input-proxy-last-name" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="proxyAlias">Proxy Alias</Label>
-                  <Input 
-                    id="proxyAlias" 
-                    name="proxyAlias" 
-                    placeholder="Alias / Nickname"
-                    data-testid="input-proxy-alias" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="proxyGender">Proxy Gender</Label>
-                  <Select name="proxyGender">
-                    <SelectTrigger id="proxyGender" data-testid="select-proxy-gender">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="proxyDateOfBirth">Proxy Date of Birth</Label>
-                  <Input 
-                    id="proxyDateOfBirth" 
-                    name="proxyDateOfBirth" 
-                    type="date"
-                    data-testid="input-proxy-dob" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="proxyNationalId">Proxy National ID</Label>
-                  <Input 
-                    id="proxyNationalId" 
-                    name="proxyNationalId" 
-                    placeholder="ID Number"
-                    data-testid="input-proxy-national-id" 
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="proxyAddress">Proxy Address</Label>
-                  <Input 
-                    id="proxyAddress" 
-                    name="proxyAddress" 
-                    placeholder="Full address"
-                    data-testid="input-proxy-address" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="proxyPhone">Proxy Phone</Label>
-                  <Input 
-                    id="proxyPhone" 
-                    name="proxyPhone" 
-                    type="tel"
-                    placeholder="Phone number"
-                    data-testid="input-proxy-phone" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="proxyRelationship">Proxy Relationship to Applicant</Label>
-                  <Select name="proxyRelationship">
-                    <SelectTrigger id="proxyRelationship" data-testid="select-proxy-relationship">
-                      <SelectValue placeholder="Select relationship" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="family">Family</SelectItem>
-                      <SelectItem value="friend">Friend</SelectItem>
-                      <SelectItem value="neighbor">Neighbor</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="proxyRole">Proxy Role</Label>
-                  <Input 
-                    id="proxyRole" 
-                    name="proxyRole" 
-                    placeholder="e.g., Caregiver, Legal Guardian"
-                    data-testid="input-proxy-role" 
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-3">
-                  <Label htmlFor="proxyReason">Reason for Proxy</Label>
-                  <Textarea 
-                    id="proxyReason" 
-                    name="proxyReason" 
-                    placeholder="Explain why a proxy is needed..."
-                    rows={2}
-                    data-testid="textarea-proxy-reason" 
-                  />
-                </div>
-              </CardContent>
-            </Card>
-            )}
-
-            {/* Applicant Information */}
-            <Card>
-              <CardHeader>
-                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <User className="h-5 w-5 text-primary" />
-                    <CardTitle>Applicant Information</CardTitle>
+                {/* Applicant Information Sub-section */}
+                <Separator />
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <User className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">Applicant Information</h3>
+                    </div>
+                    <Button type="button" onClick={addMember} variant="outline" size="sm" className="gap-2" data-testid="button-add-member">
+                      <Plus className="h-4 w-4" /> Add Member
+                    </Button>
                   </div>
-                  <Button type="button" onClick={addMember} variant="outline" size="sm" className="gap-2" data-testid="button-add-member">
-                    <Plus className="h-4 w-4" /> Add Member
-                  </Button>
-                </div>
-                <CardDescription>Enter details for the applicant and all household members.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+                  <p className="text-sm text-muted-foreground mb-4">Enter details for the applicant and all household members.</p>
+                  <div className="space-y-6">
                 {members.map((member, index) => (
                   <div key={index} className="relative animate-in fade-in slide-in-from-bottom-2">
                     {index > 0 && <Separator className="my-6" />}
@@ -1872,6 +1875,8 @@ export function Registration() {
                     </div>
                   </div>
                 ))}
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
