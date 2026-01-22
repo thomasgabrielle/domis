@@ -77,6 +77,11 @@ export const households = pgTable("households", {
   village: text("village").notNull(),
   gpsCoordinates: text("gps_coordinates"),
   
+  // Home Visit Status
+  homeVisitStatus: text("home_visit_status").default("pending"), // pending, completed
+  homeVisitDate: timestamp("home_visit_date"),
+  homeVisitNotes: text("home_visit_notes"),
+  
   // Household Details
   roofType: text("roof_type"),
   wallType: text("wall_type"),

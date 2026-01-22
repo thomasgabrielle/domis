@@ -139,6 +139,44 @@ export async function registerRoutes(
     }
   });
 
+  // Update home visit details
+  app.put("/api/households/:id/home-visit", async (req, res) => {
+    try {
+      const householdId = req.params.id;
+      
+      const homeVisitSchema = z.object({
+        householdDetails: z.object({
+          roofType: z.string().optional().nullable(),
+          wallType: z.string().optional().nullable(),
+          householdAssetsList: z.array(z.string()).optional().nullable(),
+          homeVisitNotes: z.string().optional().nullable(),
+        }),
+        members: z.array(insertHouseholdMemberSchema.omit({ householdId: true })),
+        complete: z.boolean().optional().default(false),
+      });
+      
+      const validatedData = homeVisitSchema.parse(req.body);
+      const { householdDetails, members, complete } = validatedData;
+      
+      const householdUpdate = {
+        roofType: householdDetails.roofType || null,
+        wallType: householdDetails.wallType || null,
+        householdAssetsList: householdDetails.householdAssetsList ? JSON.stringify(householdDetails.householdAssetsList) : null,
+        homeVisitNotes: householdDetails.homeVisitNotes || null,
+        homeVisitStatus: complete ? 'completed' : 'pending',
+        homeVisitDate: complete ? new Date() : null,
+      };
+      
+      const updatedHousehold = await storage.updateHousehold(householdId, householdUpdate, members);
+      res.json(updatedHousehold);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // Get related applications for a household (other applications by same members)
   app.get("/api/households/:id/related-applications", async (req, res) => {
     try {

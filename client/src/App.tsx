@@ -15,6 +15,8 @@ import { Worksheet } from "@/pages/worksheet";
 import { Registry } from "@/pages/registry";
 import { ApplicationDetail } from "@/pages/application-detail";
 import { ApplicationEdit } from "@/pages/application-edit";
+import { HomeVisits } from "@/pages/home-visits";
+import { HomeVisitDetail } from "@/pages/home-visit-detail";
 import { AdminUsers } from "@/pages/admin/users";
 import { AdminPrograms } from "@/pages/admin/programs";
 import { AdminSettings } from "@/pages/admin/settings";
@@ -37,6 +39,8 @@ function Router() {
       <Route path="/registry" component={Registry} />
       <Route path="/application/:id" component={ApplicationDetail} />
       <Route path="/application/:id/edit" component={ApplicationEdit} />
+      <Route path="/home-visits" component={HomeVisits} />
+      <Route path="/home-visit/:id" component={HomeVisitDetail} />
       
       {/* Admin Routes */}
       <Route path="/admin/users" component={AdminUsers} />
