@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { MapPin, Upload, Calendar, UserCheck } from "lucide-react";
+import { MapPin, Upload, Calendar, UserCheck, User } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 
 type LocationForm = {
@@ -17,6 +17,16 @@ type LocationForm = {
   district: string;
   village: string;
   gpsCoordinates: string;
+};
+
+type ApplicantForm = {
+  firstName: string;
+  lastName: string;
+  nationalId: string;
+  dateOfBirth: string;
+  gender: string;
+  maritalStatus: string;
+  educationLevel: string;
 };
 
 export function Registration() {
@@ -29,6 +39,16 @@ export function Registration() {
     district: "",
     village: "",
     gpsCoordinates: "",
+  });
+  
+  const [applicant, setApplicant] = useState<ApplicantForm>({
+    firstName: "",
+    lastName: "",
+    nationalId: "",
+    dateOfBirth: "",
+    gender: "",
+    maritalStatus: "",
+    educationLevel: "",
   });
 
   const createHouseholdMutation = useMutation({
@@ -93,9 +113,22 @@ export function Registration() {
       homeVisitStatus: "pending",
     };
 
+    const applicantMember = {
+      firstName: applicant.firstName,
+      lastName: applicant.lastName,
+      nationalId: applicant.nationalId || null,
+      dateOfBirth: applicant.dateOfBirth ? new Date(applicant.dateOfBirth) : null,
+      gender: applicant.gender || null,
+      maritalStatus: applicant.maritalStatus || null,
+      educationLevel: applicant.educationLevel || null,
+      relationshipToHead: "head",
+      isHead: true,
+      disabilityStatus: false,
+    };
+
     createHouseholdMutation.mutate({
       household,
-      members: [],
+      members: [applicantMember],
     });
   };
 
@@ -448,6 +481,117 @@ export function Registration() {
                 </div>
                 </>
                 )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Card 2: Applicant Information */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <User className="h-5 w-5 text-primary" />
+                  <CardTitle>Applicant Information</CardTitle>
+                </div>
+                <CardDescription>Basic information about the person applying for assistance.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="applicantFirstName">First Name *</Label>
+                    <Input 
+                      id="applicantFirstName"
+                      placeholder="Given Name"
+                      value={applicant.firstName}
+                      onChange={(e) => setApplicant(prev => ({ ...prev, firstName: e.target.value }))}
+                      required
+                      data-testid="input-applicant-firstname"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="applicantLastName">Last Name *</Label>
+                    <Input 
+                      id="applicantLastName"
+                      placeholder="Surname"
+                      value={applicant.lastName}
+                      onChange={(e) => setApplicant(prev => ({ ...prev, lastName: e.target.value }))}
+                      required
+                      data-testid="input-applicant-lastname"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="applicantNationalId">National ID</Label>
+                    <Input 
+                      id="applicantNationalId"
+                      placeholder="ID Number"
+                      value={applicant.nationalId}
+                      onChange={(e) => setApplicant(prev => ({ ...prev, nationalId: e.target.value }))}
+                      data-testid="input-applicant-nationalid"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="applicantDob">Date of Birth</Label>
+                    <Input 
+                      id="applicantDob"
+                      type="date"
+                      value={applicant.dateOfBirth}
+                      onChange={(e) => setApplicant(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                      data-testid="input-applicant-dob"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="applicantGender">Gender</Label>
+                    <Select 
+                      value={applicant.gender}
+                      onValueChange={(value) => setApplicant(prev => ({ ...prev, gender: value }))}
+                    >
+                      <SelectTrigger id="applicantGender" data-testid="select-applicant-gender">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="applicantMarital">Marital Status</Label>
+                    <Select 
+                      value={applicant.maritalStatus}
+                      onValueChange={(value) => setApplicant(prev => ({ ...prev, maritalStatus: value }))}
+                    >
+                      <SelectTrigger id="applicantMarital" data-testid="select-applicant-marital">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="single">Single</SelectItem>
+                        <SelectItem value="married">Married</SelectItem>
+                        <SelectItem value="common_law">Common Law</SelectItem>
+                        <SelectItem value="divorced">Divorced</SelectItem>
+                        <SelectItem value="widowed">Widowed</SelectItem>
+                        <SelectItem value="separated">Separated</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-3">
+                    <Label htmlFor="applicantEducation">Education Level</Label>
+                    <Select 
+                      value={applicant.educationLevel}
+                      onValueChange={(value) => setApplicant(prev => ({ ...prev, educationLevel: value }))}
+                    >
+                      <SelectTrigger id="applicantEducation" data-testid="select-applicant-education">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Formal Education</SelectItem>
+                        <SelectItem value="primary">Primary School</SelectItem>
+                        <SelectItem value="secondary">Secondary School</SelectItem>
+                        <SelectItem value="vocational">Vocational Training</SelectItem>
+                        <SelectItem value="tertiary">Tertiary/University</SelectItem>
+                        <SelectItem value="postgraduate">Postgraduate</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </CardContent>
             </Card>
