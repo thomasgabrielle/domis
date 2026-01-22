@@ -665,18 +665,37 @@ export function Assessments() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="agree">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                            <span>Agree - Approve and move to next step</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="disagree">
-                          <div className="flex items-center gap-2">
-                            <XCircle className="h-4 w-4 text-red-600" />
-                            <span>Disagree - Reject but move to next step</span>
-                          </div>
-                        </SelectItem>
+                        {currentStep === 'minister' ? (
+                          <>
+                            <SelectItem value="agree">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                <span>Approve Application</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="disagree">
+                              <div className="flex items-center gap-2">
+                                <XCircle className="h-4 w-4 text-red-600" />
+                                <span>Reject Application</span>
+                              </div>
+                            </SelectItem>
+                          </>
+                        ) : (
+                          <>
+                            <SelectItem value="agree">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                <span>Agree - Approve and move to next step</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="disagree">
+                              <div className="flex items-center gap-2">
+                                <XCircle className="h-4 w-4 text-red-600" />
+                                <span>Disagree - Reject but move to next step</span>
+                              </div>
+                            </SelectItem>
+                          </>
+                        )}
                         <SelectItem value="requires_further_info">
                           <div className="flex items-center gap-2">
                             <AlertCircle className="h-4 w-4 text-amber-600" />
