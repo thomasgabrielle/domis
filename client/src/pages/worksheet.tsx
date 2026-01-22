@@ -54,10 +54,9 @@ export function Worksheet() {
     },
   });
 
-  // Filter out households that have been moved to Recommendations module
-  // (those with assessmentStep set)
+  // Show all applications (not just those waiting to enter workflow)
   const applicationsInModule = allMembers.filter((data: any) => 
-    data.household && !data.household.assessmentStep
+    data.household
   );
 
   // Derive display status based on workflow step and programStatus
