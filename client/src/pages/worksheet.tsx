@@ -241,7 +241,6 @@ export function Worksheet() {
                   <SelectItem value="pending_director">Pending Director</SelectItem>
                   <SelectItem value="pending_ps">Pending Perm. Secretary</SelectItem>
                   <SelectItem value="pending_minister">Pending Minister</SelectItem>
-                  <SelectItem value="enrolled">Enrolled</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
