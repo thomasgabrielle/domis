@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ArrowRight, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Pencil, ClipboardCheck, Save, Loader2, AlertCircle, MessageSquare } from "lucide-react";
+import { ArrowLeft, ArrowRight, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Pencil, ClipboardCheck, Save, Loader2, AlertCircle, MessageSquare, Check, Clock, XCircle, FileText } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
@@ -843,6 +843,151 @@ export function ApplicationDetail() {
                   </div>
                 </AlertDescription>
               </Alert>
+            )}
+
+            {/* Visual Workflow Progress Timeline */}
+            {(household.assessmentStep || household.programStatus) && (
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">Workflow Progress</h3>
+                <div className="bg-muted/30 rounded-lg p-4 border">
+                  {(() => {
+                    const stages = [
+                      { id: 'intake', label: 'Intake', icon: FileText },
+                      { id: 'coordinator', label: 'Coordinator', icon: User },
+                      { id: 'director', label: 'Director', icon: User },
+                      { id: 'permanent_secretary', label: 'Perm. Secretary', icon: User },
+                      { id: 'minister', label: 'Minister', icon: User },
+                      { id: 'completed', label: 'Completed', icon: Check },
+                    ];
+                    
+                    const currentStep = household.assessmentStep;
+                    const programStatus = household.programStatus;
+                    
+                    const getStageStatus = (stageId: string, stageIndex: number) => {
+                      const stageOrder = stages.map(s => s.id);
+                      
+                      // Map assessmentStep to stage index (null/undefined = intake/applications)
+                      let currentIndex = 0; // Default to intake
+                      if (currentStep === 'coordinator') currentIndex = 1;
+                      else if (currentStep === 'director') currentIndex = 2;
+                      else if (currentStep === 'permanent_secretary') currentIndex = 3;
+                      else if (currentStep === 'minister') currentIndex = 4;
+                      else if (currentStep === 'completed') currentIndex = 5;
+                      
+                      // Handle returned for additional info
+                      if (programStatus === 'pending_additional_info') {
+                        if (stageId === 'intake') return 'returned';
+                        return 'pending';
+                      }
+                      
+                      // Handle completed workflow
+                      if (currentStep === 'completed') {
+                        if (stageId === 'completed') {
+                          return programStatus === 'enrolled' ? 'approved' : 'rejected';
+                        }
+                        return 'completed';
+                      }
+                      
+                      // Normal workflow progression
+                      if (stageIndex < currentIndex) return 'completed';
+                      if (stageIndex === currentIndex) return 'current';
+                      return 'pending';
+                    };
+                    
+                    const statusStyles: Record<string, { bg: string; border: string; text: string; icon: string }> = {
+                      completed: { bg: 'bg-emerald-500', border: 'border-emerald-500', text: 'text-white', icon: 'text-emerald-500' },
+                      current: { bg: 'bg-blue-500', border: 'border-blue-500', text: 'text-white', icon: 'text-blue-500' },
+                      pending: { bg: 'bg-muted', border: 'border-muted-foreground/30', text: 'text-muted-foreground', icon: 'text-muted-foreground/50' },
+                      returned: { bg: 'bg-amber-500', border: 'border-amber-500', text: 'text-white', icon: 'text-amber-500' },
+                      approved: { bg: 'bg-emerald-500', border: 'border-emerald-500', text: 'text-white', icon: 'text-emerald-500' },
+                      rejected: { bg: 'bg-red-500', border: 'border-red-500', text: 'text-white', icon: 'text-red-500' },
+                    };
+                    
+                    return (
+                      <div className="flex items-center justify-between" role="list" aria-label="Workflow progress timeline">
+                        {stages.map((stage, index) => {
+                          const status = getStageStatus(stage.id, index);
+                          const styles = statusStyles[status];
+                          const StageIcon = stage.icon;
+                          const isLast = index === stages.length - 1;
+                          
+                          const statusLabels: Record<string, string> = {
+                            completed: 'Completed',
+                            current: 'In Progress',
+                            pending: 'Pending',
+                            returned: 'Returned',
+                            approved: 'Approved',
+                            rejected: 'Rejected'
+                          };
+                          
+                          return (
+                            <div key={stage.id} className="flex items-center flex-1" role="listitem">
+                              <div className="flex flex-col items-center">
+                                <div 
+                                  className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${styles.bg} ${styles.border} ${styles.text} transition-all duration-300`}
+                                  data-testid={`timeline-stage-${stage.id}`}
+                                  aria-label={`${stage.label}: ${statusLabels[status]}`}
+                                  title={`${stage.label}: ${statusLabels[status]}`}
+                                >
+                                  {status === 'completed' || status === 'approved' ? (
+                                    <Check className="w-5 h-5" />
+                                  ) : status === 'rejected' ? (
+                                    <XCircle className="w-5 h-5" />
+                                  ) : status === 'current' ? (
+                                    <Clock className="w-5 h-5 animate-pulse" />
+                                  ) : status === 'returned' ? (
+                                    <AlertCircle className="w-5 h-5" />
+                                  ) : (
+                                    <StageIcon className="w-5 h-5" />
+                                  )}
+                                </div>
+                                <span className={`text-xs mt-2 font-medium text-center ${status === 'current' ? 'text-blue-600' : status === 'completed' || status === 'approved' ? 'text-emerald-600' : status === 'returned' ? 'text-amber-600' : status === 'rejected' ? 'text-red-600' : 'text-muted-foreground'}`}>
+                                  {stage.label}
+                                </span>
+                                {status === 'current' && (
+                                  <span className="text-[10px] text-blue-500 font-semibold mt-0.5">In Progress</span>
+                                )}
+                                {status === 'returned' && stage.id === 'intake' && (
+                                  <span className="text-[10px] text-amber-500 font-semibold mt-0.5">Returned</span>
+                                )}
+                              </div>
+                              {!isLast && (
+                                <div className={`flex-1 h-1 mx-2 rounded ${
+                                  getStageStatus(stages[index + 1].id, index + 1) !== 'pending' 
+                                    ? 'bg-emerald-400' 
+                                    : status === 'completed' || status === 'current' || status === 'approved'
+                                      ? 'bg-gradient-to-r from-emerald-400 to-muted'
+                                      : 'bg-muted-foreground/20'
+                                }`} />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                  
+                  {household.programStatus === 'pending_additional_info' && (
+                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-center gap-2 text-amber-700">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="text-sm font-medium">Application returned for additional information</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {household.assessmentStep === 'completed' && (
+                    <div className={`mt-4 p-3 rounded-lg ${household.programStatus === 'enrolled' ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
+                      <div className={`flex items-center gap-2 ${household.programStatus === 'enrolled' ? 'text-emerald-700' : 'text-red-700'}`}>
+                        {household.programStatus === 'enrolled' ? <Check className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                        <span className="text-sm font-medium">
+                          {household.programStatus === 'enrolled' ? 'Application approved and enrolled' : 'Application rejected'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
 
             {/* Workflow History Timeline - shows all previous review cycles */}
