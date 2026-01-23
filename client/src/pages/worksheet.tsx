@@ -19,11 +19,9 @@ type ApplicationRow = {
   householdCode: string;
   headFirstName: string;
   headLastName: string;
-  headNationalId: string | null;
-  memberCount: number;
-  region: string;
   district: string;
   village: string;
+  referral: string | null;
   status: string;
   homeVisitStatus: string;
   registrationDate: string | null;
@@ -115,11 +113,9 @@ export function Worksheet() {
       householdCode: h.householdCode,
       headFirstName: head?.firstName || '—',
       headLastName: head?.lastName || '—',
-      headNationalId: head?.nationalId || null,
-      memberCount: data.members?.length || 0,
-      region: h.province,
       district: h.district,
       village: h.village,
+      referral: h.outreachType || null,
       status: getDisplayStatus(h),
       registrationDate: h.registrationDate,
       homeVisitStatus: h.homeVisitStatus || 'pending',
@@ -136,21 +132,22 @@ export function Worksheet() {
     const matchesSearch = 
       app.headFirstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.headLastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (app.headNationalId && app.headNationalId.toLowerCase().includes(searchTerm.toLowerCase())) ||
       app.applicationId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.householdCode.toLowerCase().includes(searchTerm.toLowerCase());
+      app.householdCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.district.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.village.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || app.status === statusFilter;
-    const matchesRegion = regionFilter === "all" || app.region === regionFilter;
+    const matchesDistrict = regionFilter === "all" || app.district === regionFilter;
     
     // Exclude enrolled unless explicitly included
     const matchesEnrolledFilter = includeEnrolled || app.status !== 'enrolled';
     
-    return matchesSearch && matchesStatus && matchesRegion && matchesEnrolledFilter;
+    return matchesSearch && matchesStatus && matchesDistrict && matchesEnrolledFilter;
   });
 
-  // Get unique regions for filter
-  const uniqueRegions = Array.from(new Set(applications.map(a => a.region)));
+  // Get unique districts for filter
+  const uniqueDistricts = Array.from(new Set(applications.map(a => a.district)));
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -283,13 +280,13 @@ export function Worksheet() {
                 </SelectContent>
               </Select>
               <Select value={regionFilter} onValueChange={setRegionFilter}>
-                <SelectTrigger className="bg-background" data-testid="select-region">
-                  <SelectValue placeholder="Region" />
+                <SelectTrigger className="bg-background" data-testid="select-district">
+                  <SelectValue placeholder="District" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Regions</SelectItem>
-                  {uniqueRegions.map(region => (
-                    <SelectItem key={region} value={region}>{region}</SelectItem>
+                  <SelectItem value="all">All Districts</SelectItem>
+                  {uniqueDistricts.map(district => (
+                    <SelectItem key={district} value={district}>{district}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -332,11 +329,9 @@ export function Worksheet() {
                     <TableRow>
                       <TableHead>Application ID</TableHead>
                       <TableHead>Head of Household</TableHead>
-                      <TableHead>National ID</TableHead>
-                      <TableHead>Members</TableHead>
-                      <TableHead>Region</TableHead>
                       <TableHead>District</TableHead>
                       <TableHead>Village</TableHead>
+                      <TableHead>Referral</TableHead>
                       <TableHead>Date Registered</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="w-10"></TableHead>
@@ -382,20 +377,14 @@ export function Worksheet() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="font-mono text-sm" data-testid={`text-nationalid-${app.id}`}>
-                          {app.headNationalId || '—'}
-                        </TableCell>
-                        <TableCell data-testid={`text-members-${app.id}`}>
-                          {app.memberCount}
-                        </TableCell>
-                        <TableCell data-testid={`text-region-${app.id}`}>
-                          {app.region}
-                        </TableCell>
                         <TableCell data-testid={`text-district-${app.id}`}>
                           {app.district}
                         </TableCell>
                         <TableCell data-testid={`text-village-${app.id}`}>
                           {app.village}
+                        </TableCell>
+                        <TableCell data-testid={`text-referral-${app.id}`}>
+                          {app.referral || '—'}
                         </TableCell>
                         <TableCell data-testid={`text-date-${app.id}`}>
                           {app.registrationDate ? formatDate(app.registrationDate) : '—'}
