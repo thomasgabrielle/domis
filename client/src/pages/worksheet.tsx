@@ -63,9 +63,9 @@ export function Worksheet() {
     },
   });
 
-  // Show all applications (not just those waiting to enter workflow)
+  // Show only applications where home visit has been completed
   const applicationsInModule = allMembers.filter((data: any) => 
-    data.household
+    data.household && data.household.homeVisitStatus === 'completed'
   );
 
   // Derive display status based on workflow step and programStatus
