@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Home, ChevronRight, Calendar, MapPin } from "lucide-react";
+import { Search, Home, ChevronRight, Calendar, MapPin, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -129,12 +129,18 @@ export function HomeVisits() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-            <Home className="h-8 w-8 text-primary" />
-            Home Visits
-          </h1>
-          <p className="text-muted-foreground mt-2">Manage home visits for intake applications. Complete household details and member registration.</p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+              <Home className="h-8 w-8 text-primary" />
+              Registrations
+            </h1>
+            <p className="text-muted-foreground mt-2">Manage registrations for intake applications. Complete household details and member registration.</p>
+          </div>
+          <Button onClick={() => setLocation('/registration')} className="gap-2">
+            <Users className="h-4 w-4" />
+            New Intake
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
