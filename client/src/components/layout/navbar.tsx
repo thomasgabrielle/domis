@@ -12,7 +12,7 @@ export function Navbar() {
   const navItems = [
     { href: "/", label: "Dashboard", icon: Building2 },
     { href: "/registration", label: "Intake", icon: Users },
-    { href: "/home-visits", label: "Home Visits", icon: Home },
+    { href: "/home-visits", label: "Registrations", icon: Home },
     { href: "/worksheet", label: "Applications", icon: FileSpreadsheet },
     { href: "/assessments", label: "Recommendations", icon: ClipboardCheck },
     { href: "/registry", label: "Clients", icon: BookUser },
