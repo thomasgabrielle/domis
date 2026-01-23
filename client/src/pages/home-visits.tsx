@@ -21,6 +21,8 @@ type HomeVisitRow = {
   intakeDate: string;
   homeVisitStatus: string;
   outreachType: string | null;
+  applicantName: string | null;
+  proxyName: string | null;
 };
 
 export function HomeVisits() {
@@ -38,23 +40,36 @@ export function HomeVisits() {
     }
   });
 
-  const homeVisits: HomeVisitRow[] = households.map((h: any) => ({
-    id: h.id,
-    applicationId: h.applicationId,
-    householdCode: h.householdCode,
-    province: h.province,
-    district: h.district,
-    village: h.village,
-    intakeDate: h.intakeDate,
-    homeVisitStatus: h.homeVisitStatus || 'pending',
-    outreachType: h.outreachType,
-  }));
+  const homeVisits: HomeVisitRow[] = households.map((h: any) => {
+    const headMember = h.members?.find((m: any) => m.isHead) || h.members?.[0];
+    const applicantName = headMember ? `${headMember.firstName} ${headMember.lastName}`.trim() : null;
+    const proxyName = h.proxyFirstName && h.proxyLastName 
+      ? `${h.proxyFirstName} ${h.proxyLastName}`.trim() 
+      : null;
+    
+    return {
+      id: h.id,
+      applicationId: h.applicationId,
+      householdCode: h.householdCode,
+      province: h.province,
+      district: h.district,
+      village: h.village,
+      intakeDate: h.intakeDate,
+      homeVisitStatus: h.homeVisitStatus || 'pending',
+      outreachType: h.outreachType,
+      applicantName,
+      proxyName,
+    };
+  });
 
   const filteredVisits = homeVisits.filter(visit => {
+    const searchLower = searchTerm.toLowerCase();
     const matchesSearch = 
-      visit.applicationId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      visit.householdCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      visit.village.toLowerCase().includes(searchTerm.toLowerCase());
+      visit.applicationId.toLowerCase().includes(searchLower) ||
+      visit.householdCode.toLowerCase().includes(searchLower) ||
+      visit.village.toLowerCase().includes(searchLower) ||
+      (visit.applicantName?.toLowerCase().includes(searchLower) || false) ||
+      (visit.proxyName?.toLowerCase().includes(searchLower) || false);
     
     const matchesStatus = statusFilter === "all" || visit.homeVisitStatus === statusFilter;
     const matchesRegion = regionFilter === "all" || visit.province === regionFilter;
@@ -168,6 +183,7 @@ export function HomeVisits() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Name</TableHead>
                     <TableHead>Application ID</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Intake Date</TableHead>
@@ -178,6 +194,18 @@ export function HomeVisits() {
                 <TableBody>
                   {filteredVisits.map((visit) => (
                     <TableRow key={visit.id} data-testid={`row-visit-${visit.id}`}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">
+                            {visit.applicantName || <span className="text-muted-foreground italic">Not recorded</span>}
+                          </div>
+                          {visit.proxyName && (
+                            <div className="text-xs text-muted-foreground">
+                              Proxy: {visit.proxyName}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">{visit.applicationId}</div>
