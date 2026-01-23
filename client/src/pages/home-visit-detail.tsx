@@ -249,6 +249,7 @@ export function HomeVisitDetail() {
       queryClient.invalidateQueries({ queryKey: ['household', params.id] });
       queryClient.invalidateQueries({ queryKey: ['households'] });
       queryClient.invalidateQueries({ queryKey: ['households-with-members'] });
+      queryClient.invalidateQueries({ queryKey: ['all-members'] });
       toast({
         title: variables.complete ? "Home Visit Completed" : "Progress Saved",
         description: variables.complete 
