@@ -28,6 +28,8 @@ type HomeVisitRow = {
   proxyRelationship: string | null;
   proxyPhone: string | null;
   hasProxy: boolean;
+  actionTaken: string | null;
+  assignedTo: string | null;
 };
 
 export function HomeVisits() {
@@ -44,6 +46,18 @@ export function HomeVisits() {
       return response.json();
     }
   });
+
+  const getAssignedTo = (actionTaken: string | null): string | null => {
+    if (!actionTaken) return null;
+    if (actionTaken.startsWith('referred_sws_')) {
+      const name = actionTaken.replace('referred_sws_', '');
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+    if (actionTaken === 'referred_to_program') {
+      return 'Program';
+    }
+    return null;
+  };
 
   const homeVisits: HomeVisitRow[] = households.map((data: any) => {
     const h = data.household;
@@ -71,6 +85,8 @@ export function HomeVisits() {
       proxyRelationship: h.proxyRelationship || null,
       proxyPhone: h.proxyPhone || null,
       hasProxy,
+      actionTaken: h.actionTaken || null,
+      assignedTo: getAssignedTo(h.actionTaken),
     };
   }).filter(Boolean) as HomeVisitRow[];
 
@@ -197,6 +213,7 @@ export function HomeVisits() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Application ID</TableHead>
+                    <TableHead>Assigned To</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Intake Date</TableHead>
                     <TableHead>Status</TableHead>
@@ -242,6 +259,13 @@ export function HomeVisits() {
                           <div className="font-medium">{visit.applicationId || 'N/A'}</div>
                           <div className="text-xs text-muted-foreground">{visit.householdCode}</div>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {visit.assignedTo ? (
+                          <span className="font-medium">{visit.assignedTo}</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
