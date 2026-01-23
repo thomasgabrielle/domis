@@ -160,7 +160,7 @@ export async function registerRoutes(
       const validatedData = homeVisitSchema.parse(req.body);
       const { householdDetails, members, complete } = validatedData;
       
-      const householdUpdate = {
+      const householdUpdate: any = {
         roofType: householdDetails.roofType || null,
         wallType: householdDetails.wallType || null,
         householdAssetsList: householdDetails.householdAssetsList ? JSON.stringify(householdDetails.householdAssetsList) : null,
@@ -168,6 +168,12 @@ export async function registerRoutes(
         homeVisitStatus: complete ? 'completed' : 'pending',
         homeVisitDate: complete ? new Date() : null,
       };
+      
+      // When home visit is completed, set status to pending_assessment
+      if (complete) {
+        householdUpdate.programStatus = 'pending_assessment';
+        householdUpdate.assessmentStep = null;
+      }
       
       const updatedHousehold = await storage.updateHousehold(householdId, householdUpdate, members);
       res.json(updatedHousehold);
