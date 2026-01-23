@@ -191,7 +191,12 @@ export function HomeVisitDetail() {
       });
       
       if (household.members && household.members.length > 0) {
-        setMembers(household.members.map((m: any) => ({
+        const sortedMembers = [...household.members].sort((a: any, b: any) => {
+          if (a.isHead && !b.isHead) return -1;
+          if (!a.isHead && b.isHead) return 1;
+          return 0;
+        });
+        setMembers(sortedMembers.map((m: any) => ({
           id: m.id,
           firstName: m.firstName || "",
           lastName: m.lastName || "",
@@ -278,6 +283,7 @@ export function HomeVisitDetail() {
       ...member,
       dateOfBirth: member.dateOfBirth ? new Date(member.dateOfBirth) : null,
       isHead: index === 0,
+      relationshipToHead: index === 0 ? 'head' : member.relationshipToHead,
       professionalCertifications: member.professionalCertifications.join(","),
       incomeType: JSON.stringify(member.incomeType),
     }));
