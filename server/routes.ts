@@ -151,7 +151,9 @@ export async function registerRoutes(
           householdAssetsList: z.array(z.string()).optional().nullable(),
           homeVisitNotes: z.string().optional().nullable(),
         }),
-        members: z.array(insertHouseholdMemberSchema.omit({ householdId: true })),
+        members: z.array(insertHouseholdMemberSchema.omit({ householdId: true }).extend({
+          id: z.string().optional(),
+        })),
         complete: z.boolean().optional().default(false),
       });
       
