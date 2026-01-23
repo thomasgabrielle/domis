@@ -230,10 +230,10 @@ export function Registration() {
                   </Select>
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="actionTaken">Action Taken</Label>
+                  <Label htmlFor="actionTaken">Referred to</Label>
                   <Select name="actionTaken" required>
                     <SelectTrigger id="actionTaken" data-testid="select-action-taken">
-                      <SelectValue placeholder="Select action taken" />
+                      <SelectValue placeholder="Select referral" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="referred_sws_seaman">Referred to SWS: S. Seaman</SelectItem>

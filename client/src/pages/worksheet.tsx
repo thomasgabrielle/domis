@@ -115,7 +115,7 @@ export function Worksheet() {
       headLastName: head?.lastName || '—',
       district: h.district,
       village: h.village,
-      referral: h.outreachType || null,
+      referral: h.actionTaken || null,
       status: getDisplayStatus(h),
       registrationDate: h.registrationDate,
       homeVisitStatus: h.homeVisitStatus || 'pending',
