@@ -205,6 +205,7 @@ export function ApplicationDetail() {
       queryClient.invalidateQueries({ queryKey: ['households'] });
       queryClient.invalidateQueries({ queryKey: ['all-members'] });
       queryClient.invalidateQueries({ queryKey: ['/api/households-with-members'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow-history'] });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });

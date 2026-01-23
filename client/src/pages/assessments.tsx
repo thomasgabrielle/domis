@@ -121,6 +121,7 @@ export function Assessments() {
       queryClient.invalidateQueries({ queryKey: ['/api/households'] });
       queryClient.invalidateQueries({ queryKey: ['households'] });
       queryClient.invalidateQueries({ queryKey: ['all-members'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow-history'] });
       
       if (variables.decision === 'requires_further_info') {
         toast({
