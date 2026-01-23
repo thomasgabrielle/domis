@@ -182,6 +182,20 @@ export function Worksheet() {
     }
   };
 
+  const formatReferral = (referral: string | null) => {
+    if (!referral) return '—';
+    const referralMap: Record<string, string> = {
+      'referred_sws_seaman': 'SWS: S. Seaman',
+      'referred_sws_alexander': 'SWS: J. Alexander',
+      'referred_sws_paquette': 'SWS: G. Paquette',
+      'referred_sws_other': 'Other SWS Officer',
+      'referred_gender': 'Gender',
+      'referred_probation': 'Probation',
+      'referred_child_protection': 'Child Protection',
+    };
+    return referralMap[referral] || '—';
+  };
+
   return (
     <div className="min-h-screen bg-background font-sans pb-12">
       <Navbar />
@@ -384,7 +398,7 @@ export function Worksheet() {
                           {app.village}
                         </TableCell>
                         <TableCell data-testid={`text-referral-${app.id}`}>
-                          {app.referral || '—'}
+                          {formatReferral(app.referral)}
                         </TableCell>
                         <TableCell data-testid={`text-date-${app.id}`}>
                           {app.registrationDate ? formatDate(app.registrationDate) : '—'}
