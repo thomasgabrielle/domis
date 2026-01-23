@@ -349,6 +349,56 @@ export function HomeVisitDetail() {
         </div>
 
         <div className="space-y-6">
+          {/* Applicant/Proxy Information Card */}
+          <Card className="bg-muted/30">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Applicant Information</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Applicant (Head of Household)</h4>
+                  {members.length > 0 && members[0].firstName ? (
+                    <div className="space-y-1">
+                      <p className="font-medium text-lg">{members[0].firstName} {members[0].lastName}</p>
+                      {members[0].nationalId && (
+                        <p className="text-sm text-muted-foreground">National ID: {members[0].nationalId}</p>
+                      )}
+                      {members[0].gender && (
+                        <p className="text-sm text-muted-foreground">
+                          {members[0].gender === 'male' ? 'Male' : members[0].gender === 'female' ? 'Female' : 'Other'}
+                          {members[0].dateOfBirth && ` • DOB: ${members[0].dateOfBirth}`}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground italic">Not yet recorded</p>
+                  )}
+                </div>
+                {(household.proxyFirstName || household.proxyLastName) && (
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Proxy Representative</h4>
+                    <div className="space-y-1">
+                      <p className="font-medium text-lg">{household.proxyFirstName} {household.proxyLastName}</p>
+                      {household.proxyNationalId && (
+                        <p className="text-sm text-muted-foreground">National ID: {household.proxyNationalId}</p>
+                      )}
+                      {household.proxyRelationship && (
+                        <p className="text-sm text-muted-foreground">Relationship: {household.proxyRelationship}</p>
+                      )}
+                      {household.proxyPhone && (
+                        <p className="text-sm text-muted-foreground">Phone: {household.proxyPhone}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
