@@ -13,12 +13,12 @@ import { format } from "date-fns";
 
 type HomeVisitRow = {
   id: string;
-  applicationId: string;
-  householdCode: string;
-  province: string;
-  district: string;
-  village: string;
-  intakeDate: string;
+  applicationId: string | null;
+  householdCode: string | null;
+  province: string | null;
+  district: string | null;
+  village: string | null;
+  intakeDate: string | null;
   homeVisitStatus: string;
   outreachType: string | null;
   applicantName: string | null;
@@ -32,9 +32,9 @@ export function HomeVisits() {
   const [regionFilter, setRegionFilter] = useState("all");
 
   const { data: households = [], isLoading } = useQuery({
-    queryKey: ['households'],
+    queryKey: ['households-with-members'],
     queryFn: async () => {
-      const response = await fetch('/api/households');
+      const response = await fetch('/api/households-with-members');
       if (!response.ok) throw new Error('Failed to fetch households');
       return response.json();
     }
@@ -65,9 +65,9 @@ export function HomeVisits() {
   const filteredVisits = homeVisits.filter(visit => {
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch = 
-      visit.applicationId.toLowerCase().includes(searchLower) ||
-      visit.householdCode.toLowerCase().includes(searchLower) ||
-      visit.village.toLowerCase().includes(searchLower) ||
+      (visit.applicationId?.toLowerCase().includes(searchLower) || false) ||
+      (visit.householdCode?.toLowerCase().includes(searchLower) || false) ||
+      (visit.village?.toLowerCase().includes(searchLower) || false) ||
       (visit.applicantName?.toLowerCase().includes(searchLower) || false) ||
       (visit.proxyName?.toLowerCase().includes(searchLower) || false);
     
@@ -158,8 +158,8 @@ export function HomeVisits() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Regions</SelectItem>
-                  {uniqueRegions.map(region => (
-                    <SelectItem key={region} value={region}>{region}</SelectItem>
+                  {uniqueRegions.filter(Boolean).map(region => (
+                    <SelectItem key={region} value={region!}>{region}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -222,7 +222,7 @@ export function HomeVisits() {
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3 text-muted-foreground" />
-                          <span>{format(new Date(visit.intakeDate), 'MMM dd, yyyy')}</span>
+                          <span>{visit.intakeDate ? format(new Date(visit.intakeDate), 'MMM dd, yyyy') : 'N/A'}</span>
                         </div>
                       </TableCell>
                       <TableCell>
