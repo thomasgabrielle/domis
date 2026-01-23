@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Download, Filter, Search, Users, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -25,6 +26,11 @@ type ApplicationRow = {
   village: string;
   status: string;
   registrationDate: string | null;
+  hasProxy: boolean;
+  proxyName: string | null;
+  proxyNationalId: string | null;
+  proxyRelationship: string | null;
+  proxyPhone: string | null;
 };
 
 export function Worksheet() {
@@ -93,19 +99,29 @@ export function Worksheet() {
   const applications: ApplicationRow[] = applicationsInModule.map((data: any) => {
     if (!data.household) return null;
     const head = data.members?.find((m: any) => m.isHead) || data.members?.[0];
+    const h = data.household;
+    const hasProxy = !!(h.proxyFirstName || h.proxyLastName);
+    const proxyName = hasProxy 
+      ? `${h.proxyFirstName || ''} ${h.proxyLastName || ''}`.trim() 
+      : null;
     return {
-      id: data.household.id,
-      applicationId: data.household.applicationId || data.household.householdCode,
-      householdCode: data.household.householdCode,
+      id: h.id,
+      applicationId: h.applicationId || h.householdCode,
+      householdCode: h.householdCode,
       headFirstName: head?.firstName || '—',
       headLastName: head?.lastName || '—',
       headNationalId: head?.nationalId || null,
       memberCount: data.members?.length || 0,
-      region: data.household.province,
-      district: data.household.district,
-      village: data.household.village,
-      status: getDisplayStatus(data.household),
-      registrationDate: data.household.registrationDate,
+      region: h.province,
+      district: h.district,
+      village: h.village,
+      status: getDisplayStatus(h),
+      registrationDate: h.registrationDate,
+      hasProxy,
+      proxyName,
+      proxyNationalId: h.proxyNationalId || null,
+      proxyRelationship: h.proxyRelationship || null,
+      proxyPhone: h.proxyPhone || null,
     };
   }).filter(Boolean) as ApplicationRow[];
 
@@ -316,7 +332,33 @@ export function Worksheet() {
                           {app.applicationId}
                         </TableCell>
                         <TableCell className="font-medium" data-testid={`text-head-${app.id}`}>
-                          {app.headFirstName} {app.headLastName}
+                          <div className="flex items-center gap-1">
+                            {app.headFirstName} {app.headLastName}
+                            {app.hasProxy && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="text-amber-600 font-bold cursor-help">*</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">
+                                    <div className="space-y-1">
+                                      <p className="font-semibold">Proxy Representative</p>
+                                      <p className="text-sm">{app.proxyName}</p>
+                                      {app.proxyRelationship && (
+                                        <p className="text-xs text-muted-foreground">Relationship: {app.proxyRelationship}</p>
+                                      )}
+                                      {app.proxyNationalId && (
+                                        <p className="text-xs text-muted-foreground">ID: {app.proxyNationalId}</p>
+                                      )}
+                                      {app.proxyPhone && (
+                                        <p className="text-xs text-muted-foreground">Phone: {app.proxyPhone}</p>
+                                      )}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="font-mono text-sm" data-testid={`text-nationalid-${app.id}`}>
                           {app.headNationalId || '—'}

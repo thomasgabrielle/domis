@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Search, Home, ChevronRight, Calendar, MapPin } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -23,6 +24,10 @@ type HomeVisitRow = {
   outreachType: string | null;
   applicantName: string | null;
   proxyName: string | null;
+  proxyNationalId: string | null;
+  proxyRelationship: string | null;
+  proxyPhone: string | null;
+  hasProxy: boolean;
 };
 
 export function HomeVisits() {
@@ -43,8 +48,9 @@ export function HomeVisits() {
   const homeVisits: HomeVisitRow[] = households.map((h: any) => {
     const headMember = h.members?.find((m: any) => m.isHead) || h.members?.[0];
     const applicantName = headMember ? `${headMember.firstName} ${headMember.lastName}`.trim() : null;
-    const proxyName = h.proxyFirstName && h.proxyLastName 
-      ? `${h.proxyFirstName} ${h.proxyLastName}`.trim() 
+    const hasProxy = !!(h.proxyFirstName || h.proxyLastName);
+    const proxyName = hasProxy 
+      ? `${h.proxyFirstName || ''} ${h.proxyLastName || ''}`.trim() 
       : null;
     
     return {
@@ -59,6 +65,10 @@ export function HomeVisits() {
       outreachType: h.outreachType,
       applicantName,
       proxyName,
+      proxyNationalId: h.proxyNationalId || null,
+      proxyRelationship: h.proxyRelationship || null,
+      proxyPhone: h.proxyPhone || null,
+      hasProxy,
     };
   });
 
@@ -196,19 +206,38 @@ export function HomeVisits() {
                     <TableRow key={visit.id} data-testid={`row-visit-${visit.id}`}>
                       <TableCell>
                         <div>
-                          <div className="font-medium">
+                          <div className="font-medium flex items-center gap-1">
                             {visit.applicantName || <span className="text-muted-foreground italic">Not recorded</span>}
+                            {visit.hasProxy && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="text-amber-600 font-bold cursor-help">*</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">
+                                    <div className="space-y-1">
+                                      <p className="font-semibold">Proxy Representative</p>
+                                      <p className="text-sm">{visit.proxyName}</p>
+                                      {visit.proxyRelationship && (
+                                        <p className="text-xs text-muted-foreground">Relationship: {visit.proxyRelationship}</p>
+                                      )}
+                                      {visit.proxyNationalId && (
+                                        <p className="text-xs text-muted-foreground">ID: {visit.proxyNationalId}</p>
+                                      )}
+                                      {visit.proxyPhone && (
+                                        <p className="text-xs text-muted-foreground">Phone: {visit.proxyPhone}</p>
+                                      )}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
-                          {visit.proxyName && (
-                            <div className="text-xs text-muted-foreground">
-                              Proxy: {visit.proxyName}
-                            </div>
-                          )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{visit.applicationId}</div>
+                          <div className="font-medium">{visit.applicationId || 'N/A'}</div>
                           <div className="text-xs text-muted-foreground">{visit.householdCode}</div>
                         </div>
                       </TableCell>
