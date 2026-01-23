@@ -246,6 +246,11 @@ export class DatabaseStorage implements IStorage {
     if (householdData.wallType !== undefined) updateData.wallType = householdData.wallType || null;
     if (householdData.householdAssetsList !== undefined) updateData.householdAssetsList = householdData.householdAssetsList || null;
     
+    // Home visit fields
+    if ((householdData as any).homeVisitStatus !== undefined) updateData.homeVisitStatus = (householdData as any).homeVisitStatus;
+    if ((householdData as any).homeVisitDate !== undefined) updateData.homeVisitDate = (householdData as any).homeVisitDate;
+    if ((householdData as any).homeVisitNotes !== undefined) updateData.homeVisitNotes = (householdData as any).homeVisitNotes || null;
+    
     // Recommendation fields
     if (householdData.recommendation !== undefined) updateData.recommendation = householdData.recommendation || null;
     if (householdData.amountAllocation !== undefined) updateData.amountAllocation = householdData.amountAllocation || null;
