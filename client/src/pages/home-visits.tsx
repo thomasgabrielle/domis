@@ -45,8 +45,10 @@ export function HomeVisits() {
     }
   });
 
-  const homeVisits: HomeVisitRow[] = households.map((h: any) => {
-    const headMember = h.members?.find((m: any) => m.isHead) || h.members?.[0];
+  const homeVisits: HomeVisitRow[] = households.map((data: any) => {
+    const h = data.household;
+    if (!h) return null;
+    const headMember = data.members?.find((m: any) => m.isHead) || data.members?.[0];
     const applicantName = headMember ? `${headMember.firstName} ${headMember.lastName}`.trim() : null;
     const hasProxy = !!(h.proxyFirstName || h.proxyLastName);
     const proxyName = hasProxy 
@@ -70,7 +72,7 @@ export function HomeVisits() {
       proxyPhone: h.proxyPhone || null,
       hasProxy,
     };
-  });
+  }).filter(Boolean) as HomeVisitRow[];
 
   const filteredVisits = homeVisits.filter(visit => {
     const searchLower = searchTerm.toLowerCase();
