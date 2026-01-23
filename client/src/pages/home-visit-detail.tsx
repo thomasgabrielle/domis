@@ -256,7 +256,7 @@ export function HomeVisitDetail() {
           : "Your progress has been saved.",
       });
       if (variables.complete) {
-        setLocation("/home-visits");
+        setLocation("/worksheet");
       }
     },
     onError: (error: Error) => {
@@ -315,8 +315,8 @@ export function HomeVisitDetail() {
         <main className="container mx-auto px-4 py-8">
           <div className="text-center py-8">
             <p className="text-muted-foreground">Household not found.</p>
-            <Button onClick={() => setLocation("/home-visits")} className="mt-4" data-testid="button-back-not-found">
-              Back to Home Visits
+            <Button onClick={() => setLocation("/worksheet")} className="mt-4" data-testid="button-back-not-found">
+              Back to Applications
             </Button>
           </div>
         </main>
@@ -331,12 +331,12 @@ export function HomeVisitDetail() {
         <div className="mb-6">
           <Button 
             variant="ghost" 
-            onClick={() => setLocation("/home-visits")}
+            onClick={() => setLocation("/worksheet")}
             className="mb-4"
             data-testid="button-back"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Home Visits
+            Back to Applications
           </Button>
           <div className="flex items-center justify-between">
             <div>
@@ -734,7 +734,7 @@ export function HomeVisitDetail() {
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => setLocation("/home-visits")}
+                onClick={() => setLocation("/worksheet")}
                 disabled={saveHomeVisitMutation.isPending}
                 data-testid="button-cancel"
               >
