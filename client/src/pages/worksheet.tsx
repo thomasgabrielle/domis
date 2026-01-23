@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Download, Filter, Search, Users, ChevronRight } from "lucide-react";
+import { Download, Filter, Search, Users, ChevronRight, Plus, Home } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -25,6 +25,7 @@ type ApplicationRow = {
   district: string;
   village: string;
   status: string;
+  homeVisitStatus: string;
   registrationDate: string | null;
   hasProxy: boolean;
   proxyName: string | null;
@@ -63,13 +64,17 @@ export function Worksheet() {
     },
   });
 
-  // Show only applications where home visit has been completed
+  // Show ALL applications (including those awaiting home visit)
   const applicationsInModule = allMembers.filter((data: any) => 
-    data.household && data.household.homeVisitStatus === 'completed'
+    data.household
   );
 
   // Derive display status based on workflow step and programStatus
   const getDisplayStatus = (household: any) => {
+    // Check if home visit is pending - this is the first status after intake
+    if (household.homeVisitStatus !== 'completed') {
+      return 'awaiting_home_visit';
+    }
     // Check if marked as pending additional info
     if (household.programStatus === 'pending_additional_info') {
       return 'pending_additional_info';
@@ -117,6 +122,7 @@ export function Worksheet() {
       village: h.village,
       status: getDisplayStatus(h),
       registrationDate: h.registrationDate,
+      homeVisitStatus: h.homeVisitStatus || 'pending',
       hasProxy,
       proxyName,
       proxyNationalId: h.proxyNationalId || null,
@@ -148,6 +154,8 @@ export function Worksheet() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case 'awaiting_home_visit':
+        return <Badge className="bg-sky-100 text-sky-800 border-sky-200">Awaiting Home Visit</Badge>;
       case 'pending_assessment':
         return <Badge className="bg-amber-100 text-amber-800 border-amber-200">Pending Assessment</Badge>;
       case 'pending_additional_info':
@@ -187,29 +195,34 @@ export function Worksheet() {
             <h1 className="text-3xl font-heading font-bold text-foreground">Applications</h1>
             <p className="text-muted-foreground">Complete list of all registered applications awaiting assessment.</p>
           </div>
-          <Button variant="outline" className="gap-2" data-testid="button-export">
-            <Download className="h-4 w-4" /> Export to CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setLocation('/registration')} className="gap-2" data-testid="button-new-intake">
+              <Plus className="h-4 w-4" /> New Intake
+            </Button>
+            <Button variant="outline" className="gap-2" data-testid="button-export">
+              <Download className="h-4 w-4" /> Export to CSV
+            </Button>
+          </div>
         </div>
 
         {/* Stats Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <Card>
             <CardContent className="pt-6 flex items-center gap-4">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                 <Users className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Applications</p>
+                <p className="text-sm font-medium text-muted-foreground">Total</p>
                 <p className="text-2xl font-bold" data-testid="text-total-count">{applications.length}</p>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <p className="text-sm font-medium text-muted-foreground">Rejected</p>
-              <p className="text-2xl font-bold text-destructive" data-testid="text-rejected-count">
-                {applications.filter(a => a.status === 'rejected').length}
+              <p className="text-sm font-medium text-muted-foreground">Awaiting Visit</p>
+              <p className="text-2xl font-bold text-sky-600" data-testid="text-awaiting-count">
+                {applications.filter(a => a.status === 'awaiting_home_visit').length}
               </p>
             </CardContent>
           </Card>
@@ -226,6 +239,14 @@ export function Worksheet() {
               <p className="text-sm font-medium text-muted-foreground">In Workflow</p>
               <p className="text-2xl font-bold text-blue-600" data-testid="text-workflow-count">
                 {applications.filter(a => ['pending_coordinator', 'pending_director', 'pending_ps', 'pending_minister'].includes(a.status)).length}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm font-medium text-muted-foreground">Enrolled</p>
+              <p className="text-2xl font-bold text-emerald-600" data-testid="text-enrolled-count">
+                {applications.filter(a => a.status === 'enrolled').length}
               </p>
             </CardContent>
           </Card>
@@ -251,6 +272,7 @@ export function Worksheet() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="awaiting_home_visit">Awaiting Home Visit</SelectItem>
                   <SelectItem value="pending_assessment">Pending Assessment</SelectItem>
                   <SelectItem value="pending_additional_info">Pending Additional Info</SelectItem>
                   <SelectItem value="pending_coordinator">Pending Coordinator</SelectItem>
@@ -381,8 +403,21 @@ export function Worksheet() {
                         <TableCell data-testid={`badge-status-${app.id}`}>
                           {getStatusBadge(app.status)}
                         </TableCell>
-                        <TableCell>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          {app.status === 'awaiting_home_visit' ? (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="gap-1 text-xs"
+                              onClick={() => setLocation(`/home-visit/${app.id}`)}
+                              data-testid={`button-start-visit-${app.id}`}
+                            >
+                              <Home className="h-3 w-3" />
+                              Start Visit
+                            </Button>
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

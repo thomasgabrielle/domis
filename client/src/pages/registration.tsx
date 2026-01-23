@@ -72,9 +72,9 @@ export function Registration() {
       queryClient.invalidateQueries({ queryKey: ['households-with-members'] });
       toast({
         title: "Intake Successful",
-        description: "Household has been added and queued for assessment.",
+        description: "Application created and awaiting home visit.",
       });
-      setTimeout(() => setLocation("/"), 1500);
+      setTimeout(() => setLocation("/worksheet"), 1500);
     },
     onError: (error: Error) => {
       toast({
