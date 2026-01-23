@@ -56,6 +56,10 @@ export function HomeVisits() {
     if (actionTaken === 'referred_to_program') {
       return 'Program';
     }
+    if (actionTaken.startsWith('referred_')) {
+      const name = actionTaken.replace('referred_', '');
+      return name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' ');
+    }
     return null;
   };
 

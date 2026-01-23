@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { MapPin, Upload, Calendar, UserCheck, User } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 type LocationForm = {
   province: string;
@@ -32,6 +32,7 @@ type ApplicantForm = {
 export function Registration() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const [hasProxy, setHasProxy] = useState(false);
   
   const [locationData, setLocationData] = useState<LocationForm>({
@@ -67,6 +68,8 @@ export function Registration() {
       return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['households'] });
+      queryClient.invalidateQueries({ queryKey: ['households-with-members'] });
       toast({
         title: "Intake Successful",
         description: "Household has been added and queued for assessment.",
