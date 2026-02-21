@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useParams } from "wouter";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, MapPin, User, Upload, Calendar, UserCheck, ArrowLeft } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Trash2, MapPin, User, Calendar, UserCheck, ArrowLeft } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 type MemberForm = {
@@ -198,9 +199,55 @@ export function ApplicationEdit() {
           </div>
         </div>
 
+        {/* Primary Applicant Highlight */}
+        {(() => {
+          const headOfHousehold = members?.find((m) => m.relationshipToHead === 'head');
+          if (!headOfHousehold) return null;
+          const age = headOfHousehold.dateOfBirth
+            ? Math.floor((new Date().getTime() - new Date(headOfHousehold.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+            : null;
+          return (
+            <Card className="mb-6 border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center text-2xl font-bold text-primary shrink-0">
+                    {headOfHousehold.firstName?.charAt(0)}{headOfHousehold.lastName?.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Badge className="bg-primary text-primary-foreground mb-1">Primary Applicant</Badge>
+                    <h2 className="text-2xl font-bold text-foreground">
+                      {headOfHousehold.firstName} {headOfHousehold.lastName}
+                    </h2>
+                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">Age:</span> {age || '—'}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">Sex:</span> <span className="capitalize">{headOfHousehold.gender}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">National ID:</span>
+                        <span className="font-mono">{headOfHousehold.nationalId || '—'}</span>
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-4 mt-1 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">Location:</span> {householdData.village}, {householdData.district}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">Household Size:</span> {members?.length || 0} member(s)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
         <form onSubmit={handleSubmit}>
           <div className="space-y-6">
-            
+
             {/* Intake Information Section */}
             <Card>
               <CardHeader>
