@@ -411,7 +411,7 @@ export function Worksheet() {
                             <Button 
                               size="sm" 
                               variant="outline"
-                              className="gap-1 text-xs"
+                              className="gap-1 text-xs hover:cursor-pointer"
                               onClick={() => setLocation(`/home-visit/${app.id}`)}
                               data-testid={`button-start-visit-${app.id}`}
                             >

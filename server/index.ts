@@ -6,6 +6,9 @@ import { createServer } from "http";
 const app = express();
 const httpServer = createServer(app);
 
+// Trust proxy headers from Railway
+app.set("trust proxy", 1);
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
@@ -89,10 +92,13 @@ app.use((req, res, next) => {
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
     },
     () => {
       log(`serving on port ${port}`);
+      const publicUrl = process.env.PUBLIC_URL;
+      if (publicUrl) {
+        log(`public URL: ${publicUrl}`);
+      }
     },
   );
 })();

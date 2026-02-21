@@ -1,6 +1,6 @@
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { neonConfig, Pool } from "@neondatabase/serverless";
-import ws from "ws";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pkg from "pg";
+const { Pool } = pkg;
 import { eq, desc, and, ne, sql } from "drizzle-orm";
 import { 
   users, households, householdMembers, assessments, grievances, 
@@ -19,10 +19,8 @@ import {
   type WorkflowHistory, type InsertWorkflowHistory,
 } from "@shared/schema";
 
-neonConfig.webSocketConstructor = ws;
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
-const db = drizzle({ client: pool });
+const pool = new Pool({ connectionString: process.env.DATABASE_URL!, ssl: { rejectUnauthorized: false } });
+const db = drizzle(pool);
 
 export interface IStorage {
   // Users

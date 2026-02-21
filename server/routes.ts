@@ -670,5 +670,15 @@ export async function registerRoutes(
     }
   });
 
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || "development",
+      publicUrl: process.env.PUBLIC_URL || "http://localhost:5000"
+    });
+  });
+
   return httpServer;
 }
