@@ -19,7 +19,11 @@ import {
   type WorkflowHistory, type InsertWorkflowHistory,
 } from "@shared/schema";
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL!, ssl: { rejectUnauthorized: false } });
+const isLocal = process.env.DATABASE_URL?.includes("localhost") || process.env.DATABASE_URL?.includes("127.0.0.1");
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL!,
+  ...(!isLocal && { ssl: { rejectUnauthorized: false } }),
+});
 const db = drizzle(pool);
 
 export interface IStorage {
