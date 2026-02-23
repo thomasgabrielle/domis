@@ -78,7 +78,9 @@ export interface IStorage {
   
   // Registry lookup
   findMemberByNationalId(nationalId: string): Promise<{ member: HouseholdMember; household: Household; allMembers: HouseholdMember[] } | undefined>;
+  findMembersByLastName(lastName: string): Promise<{ member: HouseholdMember; household: Household }[]>;
   findRelatedApplicationsByNationalIds(excludeHouseholdId: string, nationalIds: string[]): Promise<any[]>;
+  findRelatedApplications(excludeHouseholdId: string, nationalIds: string[], nameDobPairs: { firstName: string; lastName: string; dateOfBirth: string }[]): Promise<any[]>;
   
   // Roles
   createRole(role: InsertRole): Promise<Role>;
@@ -477,9 +479,21 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  async findMembersByLastName(lastName: string): Promise<{ member: HouseholdMember; household: Household }[]> {
+    const normalized = lastName.trim().toLowerCase();
+    if (normalized.length < 2) return [];
+    const results = await db.select({ member: householdMembers, household: households })
+      .from(householdMembers)
+      .innerJoin(households, eq(householdMembers.householdId, households.id))
+      .where(sql`LOWER(TRIM(${householdMembers.lastName})) = ${normalized}`);
+    return results;
+  }
+
   async findRelatedApplicationsByNationalIds(excludeHouseholdId: string, nationalIds: string[]): Promise<any[]> {
     if (nationalIds.length === 0) return [];
-    
+
+    const nidConditions = nationalIds.map(id => sql`UPPER(TRIM(${householdMembers.nationalId})) = ${id}`);
+
     // Single query to find all members with matching national IDs (excluding current household)
     const matchingMembers = await db.select({
       member: householdMembers,
@@ -490,7 +504,7 @@ export class DatabaseStorage implements IStorage {
     .where(
       and(
         ne(householdMembers.householdId, excludeHouseholdId),
-        sql`UPPER(TRIM(${householdMembers.nationalId})) = ANY(${nationalIds})`
+        sql`(${sql.join(nidConditions, sql` OR `)})`
       )
     );
     
@@ -514,6 +528,78 @@ export class DatabaseStorage implements IStorage {
       });
     }
     
+    return Array.from(householdMap.values());
+  }
+
+  async findRelatedApplications(
+    excludeHouseholdId: string,
+    nationalIds: string[],
+    nameDobPairs: { firstName: string; lastName: string; dateOfBirth: string }[]
+  ): Promise<any[]> {
+    const householdMap = new Map<string, { household: any; matchingMembers: any[] }>();
+
+    // Match by national ID
+    if (nationalIds.length > 0) {
+      const nidConditions = nationalIds.map(id => sql`UPPER(TRIM(${householdMembers.nationalId})) = ${id}`);
+      const byNid = await db.select({ member: householdMembers, household: households })
+        .from(householdMembers)
+        .innerJoin(households, eq(householdMembers.householdId, households.id))
+        .where(and(
+          ne(householdMembers.householdId, excludeHouseholdId),
+          sql`(${sql.join(nidConditions, sql` OR `)})`
+        ));
+
+      for (const row of byNid) {
+        const hId = row.household.id;
+        if (!householdMap.has(hId)) {
+          householdMap.set(hId, { household: row.household, matchingMembers: [] });
+        }
+        householdMap.get(hId)!.matchingMembers.push({
+          id: row.member.id,
+          firstName: row.member.firstName,
+          lastName: row.member.lastName,
+          nationalId: row.member.nationalId,
+          relationshipToHead: row.member.relationshipToHead,
+        });
+      }
+    }
+
+    // Match by name+DOB for members that weren't already matched by national ID
+    if (nameDobPairs.length > 0) {
+      const conditions = nameDobPairs.map(p =>
+        and(
+          sql`LOWER(TRIM(${householdMembers.firstName})) = ${p.firstName}`,
+          sql`LOWER(TRIM(${householdMembers.lastName})) = ${p.lastName}`,
+          sql`${householdMembers.dateOfBirth}::text = ${p.dateOfBirth}`
+        )
+      );
+
+      const byName = await db.select({ member: householdMembers, household: households })
+        .from(householdMembers)
+        .innerJoin(households, eq(householdMembers.householdId, households.id))
+        .where(and(
+          ne(householdMembers.householdId, excludeHouseholdId),
+          sql`(${sql.join(conditions, sql` OR `)})`
+        ));
+
+      for (const row of byName) {
+        const hId = row.household.id;
+        if (!householdMap.has(hId)) {
+          householdMap.set(hId, { household: row.household, matchingMembers: [] });
+        }
+        const existing = householdMap.get(hId)!.matchingMembers;
+        if (!existing.some((m: any) => m.id === row.member.id)) {
+          existing.push({
+            id: row.member.id,
+            firstName: row.member.firstName,
+            lastName: row.member.lastName,
+            nationalId: row.member.nationalId,
+            relationshipToHead: row.member.relationshipToHead,
+          });
+        }
+      }
+    }
+
     return Array.from(householdMap.values());
   }
 

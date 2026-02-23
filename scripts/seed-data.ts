@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres";
+import { sql } from "drizzle-orm";
 import pkg from "pg";
 const { Pool } = pkg;
 import { 
@@ -66,8 +67,8 @@ const relationships = ["spouse", "child", "parent", "sibling", "other"];
 
 // Additional random data arrays for forms
 const housingTypes = ["brick_cement", "mud_brick", "timber", "mixed"];
-const roofTypes = ["corrugated_iron", "tiles", "thatch", "asbestos"];
-const wallTypes = ["cement_block", "brick", "timber", "mud"];
+const roofTypes = ["metal", "tile", "cement", "wood"];
+const wallTypes = ["wood", "cement", "pile", "metal", "other"];
 const incomeSources = ["farming", "business", "employment", "casual_labor", "pension", "remittances"];
 const assessmentDecisions = ["eligible", "ineligible", "requires_further_assessment"];
 const grievanceCategories = ["payment_issue", "procedural_error", "data_error", "service_quality", "other"];
@@ -83,21 +84,15 @@ const activityTypes = ["assessment", "home_visit", "case_review", "follow_up", "
 const departments = ["Social Development", "Case Management", "Finance", "Administration", "Field Operations"];
 
 // Additional data for household details
-const outreachTypes = ["self_referral", "community_health_worker", "social_worker", "local_government", "ngos"];
-const outreachMethods = ["door_to_door", "community_meeting", "telephone", "email", "walk_in"];
-const requestPurposes = ["food_assistance", "household_support", "education", "health", "emergency_relief", "livelihood"];
-const householdAssets = [
-  "Television, Radio",
-  "Mobile phone, Bicycle",
-  "Goat, Chicken",
-  "Small shop equipment",
-  "None",
-  "Land plot 0.5 hectare",
-  "Motorcycle, Mobile phone",
-  "Refrigerator, Solar panels",
-  "Farming tools, Seeds",
-  "Bicycle, Cooking utensils"
+const outreachTypes = ["proactive_dss", "proactive_vcc", "referral"];
+const outreachMethods = ["phone", "email", "walk_in"];
+const requestPurposes = ["social_welfare", "bureau_gender", "probation_services", "child_protection"];
+const actionTakenValues = [
+  "referred_sws_seaman", "referred_sws_alexander", "referred_sws_paquette",
+  "referred_sws_other", "referred_gender", "referred_probation",
+  "referred_child_protection", "general_question_answered"
 ];
+const householdAssetOptions = ["car", "television", "refrigerator", "microwave", "air_conditioning", "other"];
 const complementaryProgramsList = [
   "Financial literacy training",
   "Business development training",
@@ -261,7 +256,11 @@ async function seedData() {
         proxyRelationship = randomElement(proxyRoles);
       }
       
-      // Household assets and details
+      // Household assets (random subset as JSON array)
+      const numAssets = Math.floor(Math.random() * 4);
+      const shuffledAssets = [...householdAssetOptions].sort(() => Math.random() - 0.5);
+      const selectedAssets = JSON.stringify(shuffledAssets.slice(0, numAssets));
+
       const intakeDate = randomDate(new Date(2024, 0, 1), new Date());
       const vulnerabilityScore = Math.floor(Math.random() * 100);
       const hasRecommendation = homeVisitStatus === "completed" && Math.random() > 0.3;
@@ -283,7 +282,7 @@ async function seedData() {
         outreachMethod: randomElement(outreachMethods),
         isOnOwnBehalf: !hasProxy,
         requestPurpose: randomElement(requestPurposes),
-        actionTaken: "Application processed and registered in system",
+        actionTaken: randomElement(actionTakenValues),
         followUpNotes: Math.random() > 0.5 ? "Follow-up required after home visit" : null,
         // Proxy information
         proxyFirstName,
@@ -298,8 +297,8 @@ async function seedData() {
         // Household details
         roofType: randomElement(roofTypes),
         wallType: randomElement(wallTypes),
-        householdAssetsList: randomElement(householdAssets),
-        householdAssets: randomElement(householdAssets),
+        householdAssetsList: selectedAssets,
+        householdAssets: selectedAssets,
         // Assessment
         vulnerabilityScore,
         lastAssessmentDate: homeVisitStatus === "completed" ? homeVisitDate : null,
@@ -368,6 +367,71 @@ async function seedData() {
       }
     }
     console.log(`✅ Created ${householdCount} households with ${totalMembers} members`);
+
+    // Step 3b: Create duplicate applicants (same person, new application with pending home visit)
+    // This tests the "prior home visit carry-forward" feature
+    console.log("\n📝 Creating duplicate applicant applications...");
+    let dupCount = 0;
+    // Pick up to 5 households that have completed home visits
+    const completedHouseholds = [];
+    for (let h = 0; h < householdIds.length && completedHouseholds.length < 5; h++) {
+      // We know the first 30% are pending, next 30% are completed, so start from index ~15
+      if (h >= Math.floor(targetHouseholds * 0.3) && h < Math.floor(targetHouseholds * 0.6)) {
+        completedHouseholds.push(householdIds[h]);
+      }
+    }
+    // Fetch their head members and create new pending applications
+    for (const srcHouseholdId of completedHouseholds) {
+      const srcMembers = await db.select().from(householdMembers).where(
+        sql`${householdMembers.householdId} = ${srcHouseholdId} AND ${householdMembers.isHead} = true`
+      );
+      const srcHouseholdRows = await db.select().from(households).where(
+        sql`${households.id} = ${srcHouseholdId}`
+      );
+      if (srcMembers.length === 0 || srcHouseholdRows.length === 0) continue;
+      const head = srcMembers[0];
+      const srcH = srcHouseholdRows[0];
+      householdCount++;
+      const dupCode = `HH-${year}-${String(householdCount).padStart(3, '0')}-${seedTimestamp.toString().slice(-4)}`;
+
+      const [dupHousehold] = await db.insert(households).values({
+        householdCode: dupCode,
+        applicationId: `APP-${dupCode}`,
+        province: srcH.province,
+        district: srcH.district,
+        village: srcH.village,
+        gpsCoordinates: srcH.gpsCoordinates,
+        programStatus: "pending_assessment",
+        homeVisitStatus: "pending",
+        intakeDate: new Date(),
+        outreachType: randomElement(outreachTypes),
+        outreachMethod: randomElement(outreachMethods),
+        isOnOwnBehalf: true,
+        requestPurpose: randomElement(requestPurposes),
+        actionTaken: randomElement(actionTakenValues),
+        assignedSocialWorkerId: randomElement(userIds),
+        createdBy: randomElement(userIds),
+        registrationDate: new Date(),
+      }).returning();
+
+      await db.insert(householdMembers).values({
+        householdId: dupHousehold.id,
+        firstName: head.firstName,
+        lastName: head.lastName,
+        nationalId: head.nationalId,
+        dateOfBirth: head.dateOfBirth,
+        gender: head.gender,
+        relationshipToHead: "head",
+        isHead: true,
+        maritalStatus: head.maritalStatus,
+        educationLevel: head.educationLevel,
+        disabilityStatus: false,
+      });
+
+      dupCount++;
+      totalMembers++;
+    }
+    console.log(`✅ Created ${dupCount} duplicate-applicant applications for carry-forward testing`);
 
     // Step 4: Create 50 assessments linked to households
     console.log("\n📝 Creating 50 assessments...");

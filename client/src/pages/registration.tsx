@@ -6,10 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { useState } from "react";
-import { MapPin, Upload, Calendar, UserCheck, User } from "lucide-react";
+import { useState, useCallback } from "react";
+import { MapPin, Upload, Calendar, UserCheck, User, AlertCircle, XCircle, Search, CheckCircle2, Loader2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 type LocationForm = {
@@ -34,7 +36,116 @@ export function Registration() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [hasProxy, setHasProxy] = useState(false);
-  
+
+  // Last name lookup state
+  const [lastNameMatches, setLastNameMatches] = useState<any[]>([]);
+  const [lastNameSearchDone, setLastNameSearchDone] = useState(false);
+  const [lastNameDismissed, setLastNameDismissed] = useState(false);
+
+  // Last name match selection state
+  const [selectedMatch, setSelectedMatch] = useState<any>(null);
+  const [copyConfirmOpen, setCopyConfirmOpen] = useState(false);
+  const [copyLoading, setCopyLoading] = useState(false);
+
+  // National ID duplicate state
+  const [nidDuplicate, setNidDuplicate] = useState<any>(null);
+  const [nidChecking, setNidChecking] = useState(false);
+
+  const lookupLastName = useCallback(async (lastName: string) => {
+    const trimmed = lastName.trim();
+    if (trimmed.length < 2) {
+      setLastNameMatches([]);
+      setLastNameSearchDone(false);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/registry/search-by-lastname/${encodeURIComponent(trimmed)}`);
+      if (res.ok) {
+        const matches = await res.json();
+        setLastNameMatches(matches);
+        setLastNameSearchDone(true);
+        setLastNameDismissed(false);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const handleSelectMatch = useCallback(async (match: any) => {
+    setSelectedMatch(match);
+    setCopyConfirmOpen(true);
+  }, []);
+
+  const handleConfirmCopy = useCallback(async () => {
+    if (!selectedMatch) return;
+    setCopyLoading(true);
+    try {
+      const res = await fetch(`/api/households/${selectedMatch.householdId}`);
+      if (!res.ok) throw new Error("Failed to fetch application data");
+      const data = await res.json();
+      const household = data.household;
+      const head = data.members?.find((m: any) => m.isHead) || data.members?.[0];
+
+      if (head) {
+        const dob = head.dateOfBirth
+          ? (head.dateOfBirth instanceof Date
+              ? head.dateOfBirth.toISOString().split('T')[0]
+              : typeof head.dateOfBirth === 'string' && head.dateOfBirth.includes('T')
+                ? head.dateOfBirth.split('T')[0]
+                : String(head.dateOfBirth))
+          : "";
+        setApplicant({
+          firstName: head.firstName || "",
+          lastName: head.lastName || "",
+          nationalId: head.nationalId || "",
+          dateOfBirth: dob,
+          gender: head.gender || "",
+          maritalStatus: head.maritalStatus || "",
+          educationLevel: head.educationLevel || "",
+        });
+      }
+
+      if (household) {
+        setLocationData({
+          province: household.province || "",
+          district: household.district || "",
+          village: household.village || "",
+          gpsCoordinates: household.gpsCoordinates || "",
+        });
+      }
+
+      setLastNameDismissed(true);
+      setCopyConfirmOpen(false);
+      setSelectedMatch(null);
+      toast({
+        title: "Information Copied",
+        description: `Applicant and address info copied from ${selectedMatch.applicationId}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Copy Failed",
+        description: error.message || "Could not fetch application data.",
+        variant: "destructive",
+      });
+    }
+    setCopyLoading(false);
+  }, [selectedMatch, toast]);
+
+  const checkNationalId = useCallback(async (nid: string) => {
+    const trimmed = nid.trim();
+    if (trimmed.length < 3) {
+      setNidDuplicate(null);
+      return;
+    }
+    setNidChecking(true);
+    try {
+      const res = await fetch(`/api/registry/check-national-id/${encodeURIComponent(trimmed)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setNidDuplicate(data.found ? data : null);
+      }
+    } catch { /* ignore */ }
+    setNidChecking(false);
+  }, []);
+
   const [locationData, setLocationData] = useState<LocationForm>({
     province: "",
     district: "",
@@ -87,6 +198,16 @@ export function Registration() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (nidDuplicate) {
+      toast({
+        title: "Duplicate National ID",
+        description: `This National ID is already registered to ${nidDuplicate.member.firstName} ${nidDuplicate.member.lastName}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const formData = new FormData(e.currentTarget);
     
     const household = {
@@ -119,7 +240,7 @@ export function Registration() {
     const applicantMember = {
       firstName: applicant.firstName,
       lastName: applicant.lastName,
-      nationalId: applicant.nationalId || null,
+      nationalId: applicant.nationalId,
       dateOfBirth: applicant.dateOfBirth ? new Date(applicant.dateOfBirth) : null,
       gender: applicant.gender || null,
       maritalStatus: applicant.maritalStatus || null,
@@ -147,344 +268,151 @@ export function Registration() {
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-6">
-            
-            {/* Card 1: Intake Information (includes Intake, Location, and Proxy) */}
+
+            {/* Card 1: Intake Details */}
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-primary" />
-                  <CardTitle>Intake Information</CardTitle>
+                  <CardTitle>Intake Details</CardTitle>
                 </div>
-                <CardDescription>Capture how this applicant reached the program, location details, and proxy information.</CardDescription>
+                <CardDescription>Record when and how the applicant reached the program.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-8">
-                {/* Intake Details Sub-section */}
+              <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="intakeDate">Date of Intake</Label>
-                  <Input 
-                    id="intakeDate" 
-                    name="intakeDate" 
-                    type="date" 
-                    defaultValue={new Date().toISOString().split('T')[0]}
-                    required 
-                    data-testid="input-intake-date" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="outreachType">Type of Outreach</Label>
-                  <Select name="outreachType" required>
-                    <SelectTrigger id="outreachType" data-testid="select-outreach-type">
-                      <SelectValue placeholder="Select outreach type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="proactive_dss">Proactive Outreach to DSS</SelectItem>
-                      <SelectItem value="proactive_vcc">Proactive Outreach to VCC</SelectItem>
-                      <SelectItem value="referral">Referral</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="outreachMethod">Outreach Method</Label>
-                  <Select name="outreachMethod" required>
-                    <SelectTrigger id="outreachMethod" data-testid="select-outreach-method">
-                      <SelectValue placeholder="Select method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="phone">Phone</SelectItem>
-                      <SelectItem value="email">Email</SelectItem>
-                      <SelectItem value="walk_in">Walk-in</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="isOnOwnBehalf">Is this person here on their own behalf?</Label>
-                  <Select 
-                    name="isOnOwnBehalf" 
-                    required
-                    onValueChange={(value) => setHasProxy(value === "no")}
-                  >
-                    <SelectTrigger id="isOnOwnBehalf" data-testid="select-own-behalf">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="yes">Yes</SelectItem>
-                      <SelectItem value="no">No (Proxy)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="requestPurpose">Purpose of Request</Label>
-                  <Select name="requestPurpose" required>
-                    <SelectTrigger id="requestPurpose" data-testid="select-request-purpose">
-                      <SelectValue placeholder="Select purpose" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="general_question">General Question</SelectItem>
-                      <SelectItem value="social_welfare">Request for Social Welfare Service</SelectItem>
-                      <SelectItem value="bureau_gender">Request for Bureau of Gender Affairs</SelectItem>
-                      <SelectItem value="probation_services">Request for Probation Services</SelectItem>
-                      <SelectItem value="child_protection">Request for Child Protection Matters</SelectItem>
-                      <SelectItem value="undefined">Undefined</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="actionTaken">Referred to</Label>
-                  <Select name="actionTaken" required>
-                    <SelectTrigger id="actionTaken" data-testid="select-action-taken">
-                      <SelectValue placeholder="Select referral" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="referred_sws_seaman">Referred to SWS: S. Seaman</SelectItem>
-                      <SelectItem value="referred_sws_alexander">Referred to SWS: J. Alexander</SelectItem>
-                      <SelectItem value="referred_sws_paquette">Referred to SWS: G. Paquette</SelectItem>
-                      <SelectItem value="referred_sws_other">Referred to other SWS Officer</SelectItem>
-                      <SelectItem value="referred_gender">Referred to Gender</SelectItem>
-                      <SelectItem value="referred_probation">Referred to Probation</SelectItem>
-                      <SelectItem value="referred_child_protection">Referred to Child Protection</SelectItem>
-                      <SelectItem value="general_question_answered">Answer to general question provided</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="followUpNotes">Additional Information on Follow Up</Label>
-                  <Textarea 
-                    id="followUpNotes" 
-                    name="followUpNotes" 
-                    placeholder="Enter any additional notes regarding follow-up actions..."
-                    rows={3}
-                    data-testid="textarea-follow-up-notes"
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="fileUpload">Upload Additional Files (Optional)</Label>
-                  <div className="flex items-center gap-2">
-                    <Input 
-                      id="fileUpload" 
-                      name="fileUpload" 
-                      type="file" 
-                      className="flex-1"
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      data-testid="input-file-upload" 
+                  <div className="space-y-2">
+                    <Label htmlFor="intakeDate">Date of Intake</Label>
+                    <Input
+                      id="intakeDate"
+                      name="intakeDate"
+                      type="date"
+                      defaultValue={new Date().toISOString().split('T')[0]}
+                      required
+                      data-testid="input-intake-date"
                     />
-                    <Button type="button" variant="outline" size="icon" title="Upload File" data-testid="button-upload-file">
-                      <Upload className="h-4 w-4" />
-                    </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">Supported: PDF, DOC, DOCX, JPG, PNG</p>
-                </div>
-                </div>
-
-                {/* Location Sub-section */}
-                <Separator />
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-semibold">Location & Address</h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="outreachType">Type of Outreach</Label>
+                    <Select name="outreachType" required>
+                      <SelectTrigger id="outreachType" data-testid="select-outreach-type">
+                        <SelectValue placeholder="Select outreach type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="proactive_dss">Proactive Outreach to DSS</SelectItem>
+                        <SelectItem value="proactive_vcc">Proactive Outreach to VCC</SelectItem>
+                        <SelectItem value="referral">Referral</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-4">Geographic location of the household dwelling.</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="province">Province/Region</Label>
-                  <Select 
-                    name="province" 
-                    required
-                    value={locationData.province}
-                    onValueChange={(value) => setLocationData(prev => ({ ...prev, province: value }))}
-                  >
-                    <SelectTrigger id="province" data-testid="select-province">
-                      <SelectValue placeholder="Select Province" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Central Province">Central Province</SelectItem>
-                      <SelectItem value="Eastern Province">Eastern Province</SelectItem>
-                      <SelectItem value="Western Province">Western Province</SelectItem>
-                      <SelectItem value="Northern Province">Northern Province</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="district">District</Label>
-                  <Select 
-                    name="district" 
-                    required
-                    value={locationData.district}
-                    onValueChange={(value) => setLocationData(prev => ({ ...prev, district: value }))}
-                  >
-                    <SelectTrigger id="district" data-testid="select-district">
-                      <SelectValue placeholder="Select District" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Capital District">Capital District</SelectItem>
-                      <SelectItem value="River District">River District</SelectItem>
-                      <SelectItem value="Mountain District">Mountain District</SelectItem>
-                      <SelectItem value="Lake District">Lake District</SelectItem>
-                      <SelectItem value="Coastal District">Coastal District</SelectItem>
-                      <SelectItem value="Highland District">Highland District</SelectItem>
-                      <SelectItem value="Valley District">Valley District</SelectItem>
-                      <SelectItem value="Border District">Border District</SelectItem>
-                      <SelectItem value="Desert District">Desert District</SelectItem>
-                      <SelectItem value="Plains District">Plains District</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="village">Village / Community</Label>
-                  <Input 
-                    id="village" 
-                    name="village" 
-                    placeholder="Enter village name" 
-                    required 
-                    data-testid="input-village"
-                    value={locationData.village}
-                    onChange={(e) => setLocationData(prev => ({ ...prev, village: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="gps">GPS Coordinates (Optional)</Label>
-                  <div className="flex gap-2">
-                    <Input 
-                      id="gps" 
-                      name="gps" 
-                      placeholder="Lat, Long" 
-                      data-testid="input-gps"
-                      value={locationData.gpsCoordinates}
-                      onChange={(e) => setLocationData(prev => ({ ...prev, gpsCoordinates: e.target.value }))}
-                    />
-                    <Button type="button" variant="outline" size="icon" title="Get Current Location" data-testid="button-gps">
-                      <MapPin className="h-4 w-4" />
-                    </Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="outreachMethod">Outreach Method</Label>
+                    <Select name="outreachMethod" required>
+                      <SelectTrigger id="outreachMethod" data-testid="select-outreach-method">
+                        <SelectValue placeholder="Select method" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="phone">Phone</SelectItem>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="walk_in">Walk-in</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="isOnOwnBehalf">Is this person here on their own behalf?</Label>
+                    <Select
+                      name="isOnOwnBehalf"
+                      required
+                      onValueChange={(value) => setHasProxy(value === "no")}
+                    >
+                      <SelectTrigger id="isOnOwnBehalf" data-testid="select-own-behalf">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="yes">Yes</SelectItem>
+                        <SelectItem value="no">No (Proxy)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
-                {/* Proxy Sub-section - Only shown when proxy is selected */}
+                {/* Proxy Sub-section - Only shown when "No (Proxy)" is selected */}
                 {hasProxy && (
-                <>
-                <Separator />
-                <div className="animate-in fade-in slide-in-from-top-2">
-                  <div className="flex items-center gap-2 mb-4">
-                    <UserCheck className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-semibold">Proxy Information</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">Enter the details of the person applying on behalf of the applicant.</p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="proxyFirstName">Proxy First Name</Label>
-                      <Input 
-                        id="proxyFirstName" 
-                        name="proxyFirstName" 
-                        placeholder="First name"
-                        data-testid="input-proxy-first-name" 
-                      />
+                  <>
+                    <Separator />
+                    <div className="animate-in fade-in slide-in-from-top-2">
+                      <div className="flex items-center gap-2 mb-4">
+                        <UserCheck className="h-5 w-5 text-primary" />
+                        <h3 className="text-lg font-semibold">Proxy Information</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-4">Enter the details of the person applying on behalf of the applicant.</p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="proxyFirstName">Proxy First Name</Label>
+                          <Input id="proxyFirstName" name="proxyFirstName" placeholder="First name" data-testid="input-proxy-first-name" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="proxyLastName">Proxy Last Name</Label>
+                          <Input id="proxyLastName" name="proxyLastName" placeholder="Last name" data-testid="input-proxy-last-name" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="proxyAlias">Proxy Alias</Label>
+                          <Input id="proxyAlias" name="proxyAlias" placeholder="Alias / Nickname" data-testid="input-proxy-alias" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="proxyGender">Proxy Gender</Label>
+                          <Select name="proxyGender">
+                            <SelectTrigger id="proxyGender" data-testid="select-proxy-gender">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="male">Male</SelectItem>
+                              <SelectItem value="female">Female</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="proxyDateOfBirth">Proxy Date of Birth</Label>
+                          <Input id="proxyDateOfBirth" name="proxyDateOfBirth" type="date" data-testid="input-proxy-dob" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="proxyNationalId">Proxy National ID</Label>
+                          <Input id="proxyNationalId" name="proxyNationalId" placeholder="ID Number" data-testid="input-proxy-national-id" />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="proxyAddress">Proxy Address</Label>
+                          <Input id="proxyAddress" name="proxyAddress" placeholder="Full address" data-testid="input-proxy-address" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="proxyPhone">Proxy Phone</Label>
+                          <Input id="proxyPhone" name="proxyPhone" type="tel" placeholder="Phone number" data-testid="input-proxy-phone" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="proxyRelationship">Relationship to Applicant</Label>
+                          <Select name="proxyRelationship">
+                            <SelectTrigger id="proxyRelationship" data-testid="select-proxy-relationship">
+                              <SelectValue placeholder="Select relationship" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="family">Family</SelectItem>
+                              <SelectItem value="friend">Friend</SelectItem>
+                              <SelectItem value="neighbor">Neighbor</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="proxyRole">Proxy Role</Label>
+                          <Input id="proxyRole" name="proxyRole" placeholder="e.g., Caregiver, Legal Guardian" data-testid="input-proxy-role" />
+                        </div>
+                        <div className="space-y-2 md:col-span-3">
+                          <Label htmlFor="proxyReason">Reason for Proxy</Label>
+                          <Textarea id="proxyReason" name="proxyReason" placeholder="Explain why a proxy is needed..." rows={2} data-testid="textarea-proxy-reason" />
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="proxyLastName">Proxy Last Name</Label>
-                      <Input 
-                        id="proxyLastName" 
-                        name="proxyLastName" 
-                        placeholder="Last name"
-                        data-testid="input-proxy-last-name" 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="proxyAlias">Proxy Alias</Label>
-                      <Input 
-                        id="proxyAlias" 
-                        name="proxyAlias" 
-                        placeholder="Alias / Nickname"
-                        data-testid="input-proxy-alias" 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="proxyGender">Proxy Gender</Label>
-                      <Select name="proxyGender">
-                        <SelectTrigger id="proxyGender" data-testid="select-proxy-gender">
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="proxyDateOfBirth">Proxy Date of Birth</Label>
-                      <Input 
-                        id="proxyDateOfBirth" 
-                        name="proxyDateOfBirth" 
-                        type="date"
-                        data-testid="input-proxy-dob" 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="proxyNationalId">Proxy National ID</Label>
-                      <Input 
-                        id="proxyNationalId" 
-                        name="proxyNationalId" 
-                        placeholder="ID Number"
-                        data-testid="input-proxy-national-id" 
-                      />
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="proxyAddress">Proxy Address</Label>
-                      <Input 
-                        id="proxyAddress" 
-                        name="proxyAddress" 
-                        placeholder="Full address"
-                        data-testid="input-proxy-address" 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="proxyPhone">Proxy Phone</Label>
-                      <Input 
-                        id="proxyPhone" 
-                        name="proxyPhone" 
-                        type="tel"
-                        placeholder="Phone number"
-                        data-testid="input-proxy-phone" 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="proxyRelationship">Proxy Relationship to Applicant</Label>
-                      <Select name="proxyRelationship">
-                        <SelectTrigger id="proxyRelationship" data-testid="select-proxy-relationship">
-                          <SelectValue placeholder="Select relationship" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="family">Family</SelectItem>
-                          <SelectItem value="friend">Friend</SelectItem>
-                          <SelectItem value="neighbor">Neighbor</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="proxyRole">Proxy Role</Label>
-                      <Input 
-                        id="proxyRole" 
-                        name="proxyRole" 
-                        placeholder="e.g., Caregiver, Legal Guardian"
-                        data-testid="input-proxy-role" 
-                      />
-                    </div>
-                    <div className="space-y-2 md:col-span-3">
-                      <Label htmlFor="proxyReason">Reason for Proxy</Label>
-                      <Textarea 
-                        id="proxyReason" 
-                        name="proxyReason" 
-                        placeholder="Explain why a proxy is needed..."
-                        rows={2}
-                        data-testid="textarea-proxy-reason" 
-                      />
-                    </div>
-                  </div>
-                </div>
-                </>
+                  </>
                 )}
-                </div>
               </CardContent>
             </Card>
 
@@ -512,24 +440,54 @@ export function Registration() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="applicantLastName">Last Name *</Label>
-                    <Input 
-                      id="applicantLastName"
-                      placeholder="Surname"
-                      value={applicant.lastName}
-                      onChange={(e) => setApplicant(prev => ({ ...prev, lastName: e.target.value }))}
-                      required
-                      data-testid="input-applicant-lastname"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="applicantLastName"
+                        placeholder="Surname"
+                        value={applicant.lastName}
+                        onChange={(e) => {
+                          setApplicant(prev => ({ ...prev, lastName: e.target.value }));
+                          setLastNameSearchDone(false);
+                          setLastNameDismissed(false);
+                        }}
+                        onBlur={() => lookupLastName(applicant.lastName)}
+                        required
+                        data-testid="input-applicant-lastname"
+                      />
+                      {lastNameSearchDone && lastNameMatches.length > 0 && (
+                        <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-amber-500" />
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="applicantNationalId">National ID</Label>
-                    <Input 
-                      id="applicantNationalId"
-                      placeholder="ID Number"
-                      value={applicant.nationalId}
-                      onChange={(e) => setApplicant(prev => ({ ...prev, nationalId: e.target.value }))}
-                      data-testid="input-applicant-nationalid"
-                    />
+                    <Label htmlFor="applicantNationalId">National ID *</Label>
+                    <div className="relative">
+                      <Input
+                        id="applicantNationalId"
+                        placeholder="ID Number"
+                        value={applicant.nationalId}
+                        onChange={(e) => {
+                          setApplicant(prev => ({ ...prev, nationalId: e.target.value }));
+                          setNidDuplicate(null);
+                        }}
+                        onBlur={() => checkNationalId(applicant.nationalId)}
+                        required
+                        className={nidDuplicate ? "border-destructive focus-visible:ring-destructive" : ""}
+                        data-testid="input-applicant-nationalid"
+                      />
+                      {nidChecking && (
+                        <span className="absolute right-2.5 top-2.5 text-xs text-muted-foreground">Checking...</span>
+                      )}
+                      {nidDuplicate && (
+                        <XCircle className="absolute right-2.5 top-2.5 h-4 w-4 text-destructive" />
+                      )}
+                    </div>
+                    {nidDuplicate && (
+                      <p className="text-sm text-destructive flex items-center gap-1">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        This National ID is already registered to {nidDuplicate.member.firstName} {nidDuplicate.member.lastName} ({nidDuplicate.household.applicationId || nidDuplicate.household.householdCode})
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="applicantDob">Date of Birth</Label>
@@ -596,6 +554,261 @@ export function Registration() {
                     </Select>
                   </div>
                 </div>
+
+                {/* Last name match alert */}
+                {lastNameSearchDone && lastNameMatches.length > 0 && !lastNameDismissed && (
+                  <Alert variant="default" className="mt-4 border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <AlertTitle className="text-amber-800 dark:text-amber-200">
+                      Possible Match Found
+                    </AlertTitle>
+                    <AlertDescription className="text-amber-700 dark:text-amber-300">
+                      {!copyConfirmOpen ? (
+                        <>
+                          <p className="mb-3">
+                            {lastNameMatches.length === 1
+                              ? 'There is 1 existing person'
+                              : `There are ${lastNameMatches.length} existing people`} with the last name "{applicant.lastName}". Select a match to copy their information, or continue if none apply.
+                          </p>
+                          <div className="space-y-2 mb-3">
+                            {lastNameMatches.map((match: any) => (
+                              <button
+                                type="button"
+                                key={`${match.memberId}-${match.householdId}`}
+                                className="w-full flex items-center gap-3 p-2 bg-white/60 dark:bg-black/20 rounded border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900 cursor-pointer transition-colors text-left"
+                                onClick={() => handleSelectMatch(match)}
+                              >
+                                <span className="font-medium text-sm">{match.firstName} {match.lastName}</span>
+                                {match.nationalId && (
+                                  <span className="text-xs font-mono text-muted-foreground">ID: {match.nationalId}</span>
+                                )}
+                                {match.dateOfBirth && (
+                                  <span className="text-xs text-muted-foreground">DOB: {new Date(match.dateOfBirth).toLocaleDateString()}</span>
+                                )}
+                                <Badge variant="secondary" className="text-xs ml-auto">
+                                  {match.programStatus?.replace(/_/g, ' ')}
+                                </Badge>
+                                <span className="text-xs font-mono text-muted-foreground">{match.applicationId}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-amber-800 border-amber-300 hover:bg-amber-100"
+                              onClick={() => setLastNameDismissed(true)}
+                            >
+                              Not the same person — continue
+                            </Button>
+                          </div>
+                        </>
+                      ) : selectedMatch && (
+                        <div className="space-y-3">
+                          <p>
+                            Copy applicant and address information from <strong>{selectedMatch.firstName} {selectedMatch.lastName}</strong>'s application <strong>{selectedMatch.applicationId}</strong>?
+                          </p>
+                          <p className="text-xs">This will fill in the Applicant Information and Location & Address fields. Proxy information will not be copied.</p>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="bg-amber-600 hover:bg-amber-700 text-white"
+                              onClick={handleConfirmCopy}
+                              disabled={copyLoading}
+                            >
+                              {copyLoading ? (
+                                <>
+                                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                  Copying...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                                  Yes, copy information
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-amber-800 border-amber-300 hover:bg-amber-100"
+                              onClick={() => { setCopyConfirmOpen(false); setSelectedMatch(null); }}
+                              disabled={copyLoading}
+                            >
+                              Go back
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Card 3: Location & Address */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  <CardTitle>Location & Address</CardTitle>
+                </div>
+                <CardDescription>Geographic location of the household dwelling.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="province">Province/Region</Label>
+                    <Select
+                      name="province"
+                      required
+                      value={locationData.province}
+                      onValueChange={(value) => setLocationData(prev => ({ ...prev, province: value }))}
+                    >
+                      <SelectTrigger id="province" data-testid="select-province">
+                        <SelectValue placeholder="Select Province" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Central Province">Central Province</SelectItem>
+                        <SelectItem value="Eastern Province">Eastern Province</SelectItem>
+                        <SelectItem value="Western Province">Western Province</SelectItem>
+                        <SelectItem value="Northern Province">Northern Province</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="district">District</Label>
+                    <Select
+                      name="district"
+                      required
+                      value={locationData.district}
+                      onValueChange={(value) => setLocationData(prev => ({ ...prev, district: value }))}
+                    >
+                      <SelectTrigger id="district" data-testid="select-district">
+                        <SelectValue placeholder="Select District" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Capital District">Capital District</SelectItem>
+                        <SelectItem value="River District">River District</SelectItem>
+                        <SelectItem value="Mountain District">Mountain District</SelectItem>
+                        <SelectItem value="Lake District">Lake District</SelectItem>
+                        <SelectItem value="Coastal District">Coastal District</SelectItem>
+                        <SelectItem value="Highland District">Highland District</SelectItem>
+                        <SelectItem value="Valley District">Valley District</SelectItem>
+                        <SelectItem value="Border District">Border District</SelectItem>
+                        <SelectItem value="Desert District">Desert District</SelectItem>
+                        <SelectItem value="Plains District">Plains District</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="village">Village / Community</Label>
+                    <Input
+                      id="village"
+                      name="village"
+                      placeholder="Enter village name"
+                      required
+                      data-testid="input-village"
+                      value={locationData.village}
+                      onChange={(e) => setLocationData(prev => ({ ...prev, village: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gps">GPS Coordinates (Optional)</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="gps"
+                        name="gps"
+                        placeholder="Lat, Long"
+                        data-testid="input-gps"
+                        value={locationData.gpsCoordinates}
+                        onChange={(e) => setLocationData(prev => ({ ...prev, gpsCoordinates: e.target.value }))}
+                      />
+                      <Button type="button" variant="outline" size="icon" title="Get Current Location" data-testid="button-gps">
+                        <MapPin className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Card 4: Request & Referral */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Upload className="h-5 w-5 text-primary" />
+                  <CardTitle>Request & Referral</CardTitle>
+                </div>
+                <CardDescription>Purpose of the request and referral details.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="requestPurpose">Purpose of Request</Label>
+                    <Select name="requestPurpose" required>
+                      <SelectTrigger id="requestPurpose" data-testid="select-request-purpose">
+                        <SelectValue placeholder="Select purpose" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general_question">General Question</SelectItem>
+                        <SelectItem value="social_welfare">Request for Social Welfare Service</SelectItem>
+                        <SelectItem value="bureau_gender">Request for Bureau of Gender Affairs</SelectItem>
+                        <SelectItem value="probation_services">Request for Probation Services</SelectItem>
+                        <SelectItem value="child_protection">Request for Child Protection Matters</SelectItem>
+                        <SelectItem value="undefined">Undefined</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="actionTaken">Referred to</Label>
+                    <Select name="actionTaken" required>
+                      <SelectTrigger id="actionTaken" data-testid="select-action-taken">
+                        <SelectValue placeholder="Select referral" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="referred_sws_seaman">Referred to SWS: S. Seaman</SelectItem>
+                        <SelectItem value="referred_sws_alexander">Referred to SWS: J. Alexander</SelectItem>
+                        <SelectItem value="referred_sws_paquette">Referred to SWS: G. Paquette</SelectItem>
+                        <SelectItem value="referred_sws_other">Referred to other SWS Officer</SelectItem>
+                        <SelectItem value="referred_gender">Referred to Gender</SelectItem>
+                        <SelectItem value="referred_probation">Referred to Probation</SelectItem>
+                        <SelectItem value="referred_child_protection">Referred to Child Protection</SelectItem>
+                        <SelectItem value="general_question_answered">Answer to general question provided</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="followUpNotes">Additional Information on Follow Up</Label>
+                    <Textarea
+                      id="followUpNotes"
+                      name="followUpNotes"
+                      placeholder="Enter any additional notes regarding follow-up actions..."
+                      rows={3}
+                      data-testid="textarea-follow-up-notes"
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="fileUpload">Upload Additional Files (Optional)</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="fileUpload"
+                        name="fileUpload"
+                        type="file"
+                        className="flex-1"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        data-testid="input-file-upload"
+                      />
+                      <Button type="button" variant="outline" size="icon" title="Upload File" data-testid="button-upload-file">
+                        <Upload className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Supported: PDF, DOC, DOCX, JPG, PNG</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -611,11 +824,11 @@ export function Registration() {
                 >
                   Cancel
                 </Button>
-                <Button 
-                  type="submit" 
-                  size="lg" 
+                <Button
+                  type="submit"
+                  size="lg"
                   className="min-w-[150px]"
-                  disabled={createHouseholdMutation.isPending}
+                  disabled={createHouseholdMutation.isPending || !!nidDuplicate}
                   data-testid="button-submit"
                 >
                   {createHouseholdMutation.isPending ? "Submitting..." : "Submit Intake"}

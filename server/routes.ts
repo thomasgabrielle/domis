@@ -193,26 +193,95 @@ export async function registerRoutes(
       if (!currentHousehold) {
         return res.status(404).json({ error: "Household not found" });
       }
-      
+
       const nationalIds = currentHousehold.members
         .filter(m => m.nationalId)
         .map(m => m.nationalId!.trim().toUpperCase());
-      
-      if (nationalIds.length === 0) {
+
+      // Also collect name+DOB pairs for members without national IDs
+      const nameDobPairs = currentHousehold.members
+        .filter(m => m.firstName && m.lastName && m.dateOfBirth)
+        .map(m => ({
+          firstName: m.firstName.trim().toLowerCase(),
+          lastName: m.lastName.trim().toLowerCase(),
+          dateOfBirth: m.dateOfBirth instanceof Date ? m.dateOfBirth.toISOString().split('T')[0] : String(m.dateOfBirth),
+        }));
+
+      if (nationalIds.length === 0 && nameDobPairs.length === 0) {
         return res.json([]);
       }
-      
-      // Use optimized query that fetches all matching members in one call
-      const relatedApplications = await storage.findRelatedApplicationsByNationalIds(householdId, nationalIds);
-      
+
+      const relatedApplications = await storage.findRelatedApplications(householdId, nationalIds, nameDobPairs);
+
       res.json(relatedApplications);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
+  // Get prior home visit data for the applicant (from another completed application)
+  app.get("/api/households/:id/prior-home-visit", async (req, res) => {
+    try {
+      const householdId = req.params.id;
+      const currentHousehold = await storage.getHouseholdWithMembers(householdId);
+      if (!currentHousehold) {
+        return res.status(404).json({ error: "Household not found" });
+      }
+
+      // Get the head of household (the applicant)
+      const head = currentHousehold.members.find(m => m.isHead) || currentHousehold.members[0];
+      if (!head) {
+        return res.json({ found: false });
+      }
+
+      const nationalIds = head.nationalId ? [head.nationalId.trim().toUpperCase()] : [];
+      const nameDobPairs = (head.firstName && head.lastName && head.dateOfBirth)
+        ? [{
+            firstName: head.firstName.trim().toLowerCase(),
+            lastName: head.lastName.trim().toLowerCase(),
+            dateOfBirth: head.dateOfBirth instanceof Date ? head.dateOfBirth.toISOString().split('T')[0] : String(head.dateOfBirth),
+          }]
+        : [];
+
+      if (nationalIds.length === 0 && nameDobPairs.length === 0) {
+        return res.json({ found: false });
+      }
+
+      const relatedApps = await storage.findRelatedApplications(householdId, nationalIds, nameDobPairs);
+
+      // Find the most recent one with a completed home visit
+      const completedApps = relatedApps
+        .filter(r => r.household.homeVisitStatus === 'completed')
+        .sort((a: any, b: any) => {
+          const dateA = a.household.homeVisitDate ? new Date(a.household.homeVisitDate).getTime() : 0;
+          const dateB = b.household.homeVisitDate ? new Date(b.household.homeVisitDate).getTime() : 0;
+          return dateB - dateA;
+        });
+
+      if (completedApps.length === 0) {
+        return res.json({ found: false });
+      }
+
+      // Fetch full household+members data for the most recent completed one
+      const priorHousehold = await storage.getHouseholdWithMembers(completedApps[0].household.id);
+      if (!priorHousehold) {
+        return res.json({ found: false });
+      }
+
+      res.json({
+        found: true,
+        sourceApplicationId: priorHousehold.household.applicationId || priorHousehold.household.householdCode,
+        sourceHouseholdId: priorHousehold.household.id,
+        household: priorHousehold.household,
+        members: priorHousehold.members,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ===== REGISTRY LOOKUP =====
-  
+
   // Check for duplicate National ID
   app.get("/api/registry/check-national-id/:nationalId", async (req, res) => {
     try {
@@ -233,6 +302,37 @@ export async function registerRoutes(
       } else {
         res.json({ found: false });
       }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Search members by last name
+  app.get("/api/registry/search-by-lastname/:lastName", async (req, res) => {
+    try {
+      const lastName = req.params.lastName.trim();
+      if (!lastName || lastName.length < 2) {
+        return res.status(400).json({ error: "Last name must be at least 2 characters" });
+      }
+      const results = await storage.findMembersByLastName(lastName);
+      // Deduplicate: return one entry per unique person (head members grouped by household)
+      const matches = results.map(r => ({
+        memberId: r.member.id,
+        firstName: r.member.firstName,
+        lastName: r.member.lastName,
+        nationalId: r.member.nationalId,
+        dateOfBirth: r.member.dateOfBirth,
+        gender: r.member.gender,
+        isHead: r.member.isHead,
+        relationshipToHead: r.member.relationshipToHead,
+        householdId: r.household.id,
+        applicationId: r.household.applicationId || r.household.householdCode,
+        programStatus: r.household.programStatus,
+        requestPurpose: r.household.requestPurpose,
+        district: r.household.district,
+        village: r.household.village,
+      }));
+      res.json(matches);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

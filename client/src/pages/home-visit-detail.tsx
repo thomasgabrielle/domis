@@ -13,7 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useParams } from "wouter";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Home, User, FileText, ArrowLeft, Save, Loader2, ChevronsUpDown, X } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Plus, Trash2, Home, User, FileText, ArrowLeft, Save, Loader2, ChevronsUpDown, X, Info } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 
@@ -154,8 +155,9 @@ export function HomeVisitDetail() {
     householdAssetsList: [] as string[],
     homeVisitNotes: "",
   });
-  
+
   const [members, setMembers] = useState<MemberForm[]>([{ ...emptyMember }]);
+  const [priorSource, setPriorSource] = useState<string | null>(null);
 
   const { data: household, isLoading } = useQuery({
     queryKey: ['household', params.id],
@@ -167,68 +169,115 @@ export function HomeVisitDetail() {
     enabled: !!params.id,
   });
 
-  useEffect(() => {
-    if (household) {
-      const parseAssetsList = (assets: unknown): string[] => {
-        if (!assets) return [];
-        if (Array.isArray(assets)) return assets;
-        if (typeof assets === 'string') {
-          try {
-            const parsed = JSON.parse(assets);
-            return Array.isArray(parsed) ? parsed : [];
-          } catch {
-            return [];
-          }
-        }
+  const { data: priorHomeVisit } = useQuery({
+    queryKey: ['prior-home-visit', params.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/households/${params.id}/prior-home-visit`);
+      if (!response.ok) return null;
+      return response.json();
+    },
+    enabled: !!params.id,
+  });
+
+  const parseAssetsList = (assets: unknown): string[] => {
+    if (!assets) return [];
+    if (Array.isArray(assets)) return assets;
+    if (typeof assets === 'string') {
+      try {
+        const parsed = JSON.parse(assets);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
         return [];
-      };
-      
+      }
+    }
+    return [];
+  };
+
+  const mapMembersToForm = (rawMembers: any[]): MemberForm[] => {
+    const sortedMembers = [...rawMembers].sort((a: any, b: any) => {
+      if (a.isHead && !b.isHead) return -1;
+      if (!a.isHead && b.isHead) return 1;
+      return 0;
+    });
+    return sortedMembers.map((m: any) => ({
+      id: m.id,
+      firstName: m.firstName || "",
+      lastName: m.lastName || "",
+      dateOfBirth: m.dateOfBirth ? format(new Date(m.dateOfBirth), 'yyyy-MM-dd') : "",
+      gender: m.gender || "",
+      relationshipToHead: m.relationshipToHead || "",
+      nationalId: m.nationalId || "",
+      disabilityStatus: m.disabilityStatus || false,
+      maritalStatus: m.maritalStatus || "",
+      educationLevel: m.educationLevel || "",
+      professionalCertifications: m.professionalCertifications ? m.professionalCertifications.split(",") : [],
+      currentEducationEnrolment: m.currentEducationEnrolment || "",
+      ongoingCertification: m.ongoingCertification || "",
+      professionalSituation: m.professionalSituation || "",
+      employerDetails: m.employerDetails || "",
+      incomeType: m.incomeType ? (typeof m.incomeType === 'string' ? JSON.parse(m.incomeType) : m.incomeType) : [],
+      physicalDisabilities: [],
+      physicalOther: "",
+      physicalProofMedicalReport: "",
+      mentalDisabilities: [],
+      mentalOther: "",
+      mentalProofMedicalReport: "",
+      chronicIllness: [],
+      chronicOther: "",
+      chronicProofMedicalReport: "",
+      workingAbilityImplications: "",
+      inabilityToWorkProof: "",
+      narrativeSummary: m.narrativeSummary || "",
+    }));
+  };
+
+  useEffect(() => {
+    if (!household) return;
+
+    const currentHasData = household.roofType || household.wallType || household.householdAssetsList || household.homeVisitNotes;
+    const currentHasMultipleMembers = household.members && household.members.length > 1;
+
+    if (currentHasData || currentHasMultipleMembers) {
+      // Current application already has home visit data — use it
       setHouseholdDetails({
         roofType: household.roofType || "",
         wallType: household.wallType || "",
         householdAssetsList: parseAssetsList(household.householdAssetsList),
         homeVisitNotes: household.homeVisitNotes || "",
       });
-      
       if (household.members && household.members.length > 0) {
-        const sortedMembers = [...household.members].sort((a: any, b: any) => {
-          if (a.isHead && !b.isHead) return -1;
-          if (!a.isHead && b.isHead) return 1;
-          return 0;
-        });
-        setMembers(sortedMembers.map((m: any) => ({
-          id: m.id,
-          firstName: m.firstName || "",
-          lastName: m.lastName || "",
-          dateOfBirth: m.dateOfBirth ? format(new Date(m.dateOfBirth), 'yyyy-MM-dd') : "",
-          gender: m.gender || "",
-          relationshipToHead: m.relationshipToHead || "",
-          nationalId: m.nationalId || "",
-          disabilityStatus: m.disabilityStatus || false,
-          maritalStatus: m.maritalStatus || "",
-          educationLevel: m.educationLevel || "",
-          professionalCertifications: m.professionalCertifications ? m.professionalCertifications.split(",") : [],
-          currentEducationEnrolment: m.currentEducationEnrolment || "",
-          ongoingCertification: m.ongoingCertification || "",
-          professionalSituation: m.professionalSituation || "",
-          employerDetails: m.employerDetails || "",
-          incomeType: m.incomeType ? JSON.parse(m.incomeType) : [],
-          physicalDisabilities: [],
-          physicalOther: "",
-          physicalProofMedicalReport: "",
-          mentalDisabilities: [],
-          mentalOther: "",
-          mentalProofMedicalReport: "",
-          chronicIllness: [],
-          chronicOther: "",
-          chronicProofMedicalReport: "",
-          workingAbilityImplications: "",
-          inabilityToWorkProof: "",
-          narrativeSummary: m.narrativeSummary || "",
-        })));
+        setMembers(mapMembersToForm(household.members));
       }
+      setPriorSource(null);
+    } else if (priorHomeVisit?.found) {
+      // No data on current application, but prior data exists — pre-populate
+      const prior = priorHomeVisit;
+      setHouseholdDetails({
+        roofType: prior.household.roofType || "",
+        wallType: prior.household.wallType || "",
+        householdAssetsList: parseAssetsList(prior.household.householdAssetsList),
+        homeVisitNotes: prior.household.homeVisitNotes || "",
+      });
+      if (prior.members && prior.members.length > 0) {
+        // Use prior members but strip their IDs so new records are created on save
+        const priorMembers = mapMembersToForm(prior.members).map(m => ({ ...m, id: undefined }));
+        setMembers(priorMembers);
+      }
+      setPriorSource(prior.sourceApplicationId);
+    } else {
+      // No prior data — load what we have (just the head member from intake)
+      setHouseholdDetails({
+        roofType: "",
+        wallType: "",
+        householdAssetsList: [],
+        homeVisitNotes: "",
+      });
+      if (household.members && household.members.length > 0) {
+        setMembers(mapMembersToForm(household.members));
+      }
+      setPriorSource(null);
     }
-  }, [household]);
+  }, [household, priorHomeVisit]);
 
   const saveHomeVisitMutation = useMutation({
     mutationFn: async (data: { householdDetails: any; members: any[]; complete: boolean }) => {
@@ -357,6 +406,19 @@ export function HomeVisitDetail() {
         </div>
 
         <div className="space-y-6">
+          {/* Prior data carried forward banner */}
+          {priorSource && (
+            <Alert className="border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+              <Info className="h-4 w-4 text-blue-600" />
+              <AlertTitle className="text-blue-800 dark:text-blue-200">
+                Data Carried Forward
+              </AlertTitle>
+              <AlertDescription className="text-blue-700 dark:text-blue-300">
+                Home visit data has been pre-populated from a prior application (<strong>{priorSource}</strong>). Please review and update with the current situation.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Applicant/Proxy Information Card */}
           <Card className="bg-muted/30">
             <CardHeader className="pb-3">

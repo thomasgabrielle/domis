@@ -501,47 +501,86 @@ export function ApplicationDetail() {
           );
         })()}
 
-        {/* Related Applications Navigation */}
-        {relatedApplications.length > 0 && (
-          <Card className="border-primary/20 bg-primary/5">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                <CardTitle className="text-base">Linked Applications</CardTitle>
-              </div>
-              <CardDescription>
-                {relatedApplications.length === 1 
-                  ? 'This household member also appears in another application'
-                  : `Household members appear in ${relatedApplications.length} other applications`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {relatedApplications.map((related: any) => (
-                  <Button
-                    key={related.household.id}
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 bg-background hover:bg-primary/10"
-                    onClick={() => setLocation(`/application/${related.household.id}`)}
-                    data-testid={`related-app-${related.household.id}`}
-                  >
-                    <span className="font-mono text-xs">
-                      {related.household.applicationId || related.household.householdCode}
-                    </span>
-                    <Separator orientation="vertical" className="h-4" />
-                    <span className="text-xs text-muted-foreground">
-                      {related.matchingMembers.map((m: any) => `${m.firstName} ${m.lastName}`).join(', ')}
-                    </span>
-                    <Badge variant="secondary" className="text-xs">
-                      {related.household.programStatus?.replace(/_/g, ' ')}
-                    </Badge>
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Related Applications */}
+        {relatedApplications.length > 0 && (() => {
+          const enrolledApps = relatedApplications.filter((r: any) => r.household.programStatus === 'enrolled');
+          const otherApps = relatedApplications.filter((r: any) => r.household.programStatus !== 'enrolled');
+          return (
+            <>
+              {enrolledApps.length > 0 && (
+                <Alert variant="default" className="border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950">
+                  <AlertCircle className="h-4 w-4 text-emerald-600" />
+                  <AlertTitle className="text-emerald-800 dark:text-emerald-200">
+                    Applicant is Already an Enrolled Client
+                  </AlertTitle>
+                  <AlertDescription className="text-emerald-700 dark:text-emerald-300">
+                    <p className="mb-3">
+                      This applicant is currently enrolled under {enrolledApps.length === 1 ? 'another application' : `${enrolledApps.length} other applications`}.
+                      Review the existing enrollment(s) before proceeding.
+                    </p>
+                    <div className="space-y-2">
+                      {enrolledApps.map((related: any) => (
+                        <div key={related.household.id} className="flex items-center gap-3 p-2 bg-white/60 dark:bg-black/20 rounded border border-emerald-200 dark:border-emerald-800">
+                          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 shrink-0">Enrolled</Badge>
+                          <button
+                            className="font-mono text-sm font-medium text-emerald-800 dark:text-emerald-200 hover:underline cursor-pointer"
+                            onClick={() => setLocation(`/application/${related.household.id}`)}
+                          >
+                            {related.household.applicationId || related.household.householdCode}
+                          </button>
+                          <span className="text-sm">
+                            {formatRequestPurpose(related.household.requestPurpose)}
+                          </span>
+                          <span className="text-xs text-emerald-600 ml-auto shrink-0">
+                            {related.matchingMembers.map((m: any) => `${m.firstName} ${m.lastName}`).join(', ')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+              {otherApps.length > 0 && (
+                <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/30">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-amber-600" />
+                      <CardTitle className="text-base text-amber-900 dark:text-amber-200">Other Applications by This Applicant</CardTitle>
+                    </div>
+                    <CardDescription className="text-amber-700 dark:text-amber-400">
+                      {otherApps.length === 1
+                        ? 'This applicant has 1 other application on file'
+                        : `This applicant has ${otherApps.length} other applications on file`}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {otherApps.map((related: any) => (
+                        <div key={related.household.id} className="flex items-center gap-3 p-2 bg-white/60 dark:bg-black/20 rounded border border-amber-200 dark:border-amber-800">
+                          {getStatusBadge(related.household.programStatus)}
+                          <button
+                            className="font-mono text-sm font-medium text-foreground hover:underline cursor-pointer"
+                            onClick={() => setLocation(`/application/${related.household.id}`)}
+                          >
+                            {related.household.applicationId || related.household.householdCode}
+                          </button>
+                          <span className="text-sm text-muted-foreground">
+                            {formatRequestPurpose(related.household.requestPurpose)}
+                          </span>
+                          {related.household.intakeDate && (
+                            <span className="text-xs text-muted-foreground ml-auto shrink-0">
+                              {formatDate(related.household.intakeDate)}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          );
+        })()}
 
         {/* Intake Information */}
         <Card>

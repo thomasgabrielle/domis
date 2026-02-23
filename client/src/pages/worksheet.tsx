@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Download, Filter, Search, Users, ChevronRight, Plus, Home } from "lucide-react";
+import { Download, Filter, Search, Users, ChevronRight, Plus, Home, AlertTriangle, Copy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -30,6 +30,8 @@ type ApplicationRow = {
   proxyNationalId: string | null;
   proxyRelationship: string | null;
   proxyPhone: string | null;
+  otherAppCount: number;
+  isEnrolledElsewhere: boolean;
 };
 
 export function Worksheet() {
@@ -62,8 +64,26 @@ export function Worksheet() {
     },
   });
 
+  // Build cross-reference: detect when the same person appears in multiple applications
+  const personAppMap = new Map<string, { appId: string; applicationId: string; status: string; requestPurpose: string | null }[]>();
+  for (const data of allMembers) {
+    if (!data.household) continue;
+    const head = data.members?.find((m: any) => m.isHead) || data.members?.[0];
+    if (!head) continue;
+    const key = head.nationalId
+      ? `nid:${head.nationalId.trim().toUpperCase()}`
+      : `name:${head.firstName?.toLowerCase()}_${head.lastName?.toLowerCase()}_${head.dateOfBirth}`;
+    if (!personAppMap.has(key)) personAppMap.set(key, []);
+    personAppMap.get(key)!.push({
+      appId: data.household.id,
+      applicationId: data.household.applicationId || data.household.householdCode,
+      status: data.household.programStatus || 'pending_assessment',
+      requestPurpose: data.household.requestPurpose || null,
+    });
+  }
+
   // Show ALL applications (including those awaiting home visit)
-  const applicationsInModule = allMembers.filter((data: any) => 
+  const applicationsInModule = allMembers.filter((data: any) =>
     data.household
   );
 
@@ -104,9 +124,15 @@ export function Worksheet() {
     const head = data.members?.find((m: any) => m.isHead) || data.members?.[0];
     const h = data.household;
     const hasProxy = !!(h.proxyFirstName || h.proxyLastName);
-    const proxyName = hasProxy 
-      ? `${h.proxyFirstName || ''} ${h.proxyLastName || ''}`.trim() 
+    const proxyName = hasProxy
+      ? `${h.proxyFirstName || ''} ${h.proxyLastName || ''}`.trim()
       : null;
+    // Cross-reference: find other applications for the same head of household
+    const headKey = head?.nationalId
+      ? `nid:${head.nationalId.trim().toUpperCase()}`
+      : head ? `name:${head.firstName?.toLowerCase()}_${head.lastName?.toLowerCase()}_${head.dateOfBirth}` : '';
+    const allAppsForPerson = headKey ? (personAppMap.get(headKey) || []) : [];
+    const otherApps = allAppsForPerson.filter(a => a.appId !== h.id);
     return {
       id: h.id,
       applicationId: h.applicationId || h.householdCode,
@@ -124,6 +150,8 @@ export function Worksheet() {
       proxyNationalId: h.proxyNationalId || null,
       proxyRelationship: h.proxyRelationship || null,
       proxyPhone: h.proxyPhone || null,
+      otherAppCount: otherApps.length,
+      isEnrolledElsewhere: otherApps.some(a => a.status === 'enrolled'),
     };
   }).filter(Boolean) as ApplicationRow[];
 
@@ -363,7 +391,7 @@ export function Worksheet() {
                           {app.applicationId}
                         </TableCell>
                         <TableCell className="font-medium" data-testid={`text-head-${app.id}`}>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5">
                             {app.headFirstName} {app.headLastName}
                             {app.hasProxy && (
                               <TooltipProvider>
@@ -385,6 +413,33 @@ export function Worksheet() {
                                         <p className="text-xs text-muted-foreground">Phone: {app.proxyPhone}</p>
                                       )}
                                     </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {app.otherAppCount > 0 && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    {app.isEnrolledElsewhere ? (
+                                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 cursor-help">
+                                        <AlertTriangle className="h-3 w-3" />
+                                        Client
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800 border border-blue-200 cursor-help">
+                                        <Copy className="h-3 w-3" />
+                                        {app.otherAppCount + 1}
+                                      </span>
+                                    )}
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">
+                                    <p className="font-semibold">
+                                      {app.isEnrolledElsewhere
+                                        ? 'Already enrolled as a client under another application'
+                                        : `${app.otherAppCount} other application${app.otherAppCount > 1 ? 's' : ''} on file`}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">Click to view details and linked applications</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
