@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useState, useCallback } from "react";
-import { MapPin, Upload, Calendar, UserCheck, User, AlertCircle, XCircle, Search, CheckCircle2, Loader2 } from "lucide-react";
+import { MapPin, Upload, Calendar, UserCheck, User, Users, AlertCircle, XCircle, Search, CheckCircle2, Loader2, X } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 type LocationForm = {
@@ -46,6 +46,9 @@ export function Registration() {
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
   const [copyConfirmOpen, setCopyConfirmOpen] = useState(false);
   const [copyLoading, setCopyLoading] = useState(false);
+
+  // Carried-forward household members (non-head members from prior application)
+  const [carriedMembers, setCarriedMembers] = useState<any[]>([]);
 
   // National ID duplicate state
   const [nidDuplicate, setNidDuplicate] = useState<any>(null);
@@ -112,12 +115,19 @@ export function Registration() {
         });
       }
 
+      // Carry forward non-head household members (strip IDs so new records are created)
+      const otherMembers = (data.members || [])
+        .filter((m: any) => !m.isHead)
+        .map(({ id, householdId, ...rest }: any) => rest);
+      setCarriedMembers(otherMembers);
+
       setLastNameDismissed(true);
       setCopyConfirmOpen(false);
       setSelectedMatch(null);
+      const memberCount = otherMembers.length;
       toast({
         title: "Information Copied",
-        description: `Applicant and address info copied from ${selectedMatch.applicationId}.`,
+        description: `Applicant and address info copied from ${selectedMatch.applicationId}.${memberCount > 0 ? ` ${memberCount} household member${memberCount > 1 ? 's' : ''} also carried forward.` : ''}`,
       });
     } catch (error: any) {
       toast({
@@ -252,7 +262,7 @@ export function Registration() {
 
     createHouseholdMutation.mutate({
       household,
-      members: [applicantMember],
+      members: [applicantMember, ...carriedMembers],
     });
   };
 
@@ -735,6 +745,61 @@ export function Registration() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Carried-Forward Household Members */}
+            {carriedMembers.length > 0 && (
+              <Card className="border-blue-200 bg-blue-50/30 dark:border-blue-800 dark:bg-blue-950/30">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-blue-600" />
+                    <CardTitle className="text-blue-900 dark:text-blue-100">Household Members</CardTitle>
+                  </div>
+                  <CardDescription className="text-blue-700 dark:text-blue-300">
+                    {carriedMembers.length} member{carriedMembers.length > 1 ? 's' : ''} carried forward from the prior application. Remove anyone who no longer belongs.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {carriedMembers.map((member: any, index: number) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-white dark:bg-black/20 rounded border border-blue-200 dark:border-blue-800"
+                      >
+                        <div className="flex items-center gap-4">
+                          <User className="h-4 w-4 text-blue-500 shrink-0" />
+                          <div>
+                            <span className="font-medium text-sm">
+                              {member.firstName} {member.lastName}
+                            </span>
+                            <div className="flex gap-3 text-xs text-muted-foreground mt-0.5">
+                              {member.relationshipToHead && (
+                                <span className="capitalize">{member.relationshipToHead.replace(/_/g, ' ')}</span>
+                              )}
+                              {member.gender && (
+                                <span className="capitalize">{member.gender}</span>
+                              )}
+                              {member.dateOfBirth && (
+                                <span>DOB: {new Date(member.dateOfBirth).toLocaleDateString()}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-destructive"
+                          onClick={() => setCarriedMembers(prev => prev.filter((_, i) => i !== index))}
+                          title="Remove member"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Card 4: Request & Referral */}
             <Card>

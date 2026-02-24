@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Download, Filter, Search, Users, ChevronRight, Plus, Home, AlertTriangle, Copy } from "lucide-react";
+import { Download, Filter, Search, Users, ChevronRight, Plus, Home, AlertTriangle, Copy, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -19,6 +19,7 @@ type ApplicationRow = {
   householdCode: string;
   headFirstName: string;
   headLastName: string;
+  headNationalId: string;
   district: string;
   village: string;
   referral: string | null;
@@ -139,6 +140,7 @@ export function Worksheet() {
       householdCode: h.householdCode,
       headFirstName: head?.firstName || '—',
       headLastName: head?.lastName || '—',
+      headNationalId: head?.nationalId || '',
       district: h.district,
       village: h.village,
       referral: h.actionTaken || null,
@@ -157,13 +159,15 @@ export function Worksheet() {
 
   // Apply filters
   const filteredApplications = applications.filter((app) => {
-    const matchesSearch = 
-      app.headFirstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.headLastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.applicationId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.householdCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.district.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.village.toLowerCase().includes(searchTerm.toLowerCase());
+    const term = searchTerm.toLowerCase();
+    const matchesSearch =
+      app.headFirstName.toLowerCase().includes(term) ||
+      app.headLastName.toLowerCase().includes(term) ||
+      app.headNationalId.toLowerCase().includes(term) ||
+      app.applicationId.toLowerCase().includes(term) ||
+      app.householdCode.toLowerCase().includes(term) ||
+      app.district.toLowerCase().includes(term) ||
+      app.village.toLowerCase().includes(term);
     
     const matchesStatus = statusFilter === "all" || app.status === statusFilter;
     const matchesDistrict = regionFilter === "all" || app.district === regionFilter;
@@ -298,7 +302,7 @@ export function Worksheet() {
               <div className="relative md:col-span-2">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Search by name or National ID..." 
+                  placeholder="Search by name, National ID, or Application ID..."
                   className="pl-8 bg-background" 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -333,9 +337,9 @@ export function Worksheet() {
                 </SelectContent>
               </Select>
               <div className="flex items-center gap-2 bg-background border rounded-md px-3 py-2">
-                <Checkbox 
-                  id="include-enrolled" 
-                  checked={includeEnrolled} 
+                <Checkbox
+                  id="include-enrolled"
+                  checked={includeEnrolled}
                   onCheckedChange={(checked) => setIncludeEnrolled(checked === true)}
                   data-testid="checkbox-include-enrolled"
                 />
@@ -344,6 +348,25 @@ export function Worksheet() {
                 </Label>
               </div>
             </div>
+            {(searchTerm || statusFilter !== "all" || regionFilter !== "all" || includeEnrolled) && (
+              <div className="mt-3 flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-muted-foreground"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setStatusFilter("all");
+                    setRegionFilter("all");
+                    setIncludeEnrolled(false);
+                  }}
+                  data-testid="button-clear-search"
+                >
+                  <X className="h-4 w-4" />
+                  Clear Search
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

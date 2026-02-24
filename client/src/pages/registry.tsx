@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Search, User, Users, ChevronRight, FileText } from "lucide-react";
+import { Download, Search, User, Users, ChevronRight, FileText, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -272,6 +272,23 @@ export function Registry() {
                 </SelectContent>
               </Select>
             </div>
+            {(searchTerm || provinceFilter !== "all") && (
+              <div className="mt-3 flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-muted-foreground"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setProvinceFilter("all");
+                  }}
+                  data-testid="button-clear-search"
+                >
+                  <X className="h-4 w-4" />
+                  Clear Search
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

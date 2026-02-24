@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Home, ChevronRight, Calendar, MapPin, Users } from "lucide-react";
+import { Search, Home, ChevronRight, Calendar, MapPin, Users, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -201,6 +201,22 @@ export function HomeVisits() {
                   ))}
                 </SelectContent>
               </Select>
+              {(searchTerm || statusFilter !== "pending" || regionFilter !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-muted-foreground"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setStatusFilter("pending");
+                    setRegionFilter("all");
+                  }}
+                  data-testid="button-clear-search"
+                >
+                  <X className="h-4 w-4" />
+                  Clear Search
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

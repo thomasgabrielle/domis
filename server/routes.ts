@@ -169,10 +169,10 @@ export async function registerRoutes(
         homeVisitDate: complete ? new Date() : null,
       };
       
-      // When home visit is completed, set status to pending_assessment
+      // When home visit is completed, set status to pending_assessment and assign to social worker
       if (complete) {
         householdUpdate.programStatus = 'pending_assessment';
-        householdUpdate.assessmentStep = null;
+        householdUpdate.assessmentStep = 'social_worker';
       }
       
       const updatedHousehold = await storage.updateHousehold(householdId, householdUpdate, members);

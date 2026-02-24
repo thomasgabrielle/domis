@@ -313,30 +313,35 @@ export class DatabaseStorage implements IStorage {
         ? new Date(member.dateOfBirth) 
         : member.dateOfBirth;
         
+      const memberFields: any = {
+        firstName: member.firstName,
+        lastName: member.lastName,
+        dateOfBirth: memberDateOfBirth,
+        gender: member.gender,
+        relationshipToHead: member.relationshipToHead,
+        nationalId: member.nationalId || null,
+        disabilityStatus: member.disabilityStatus,
+        isHead: member.isHead,
+      };
+      // Extended fields (from home visit / edit page)
+      if (member.maritalStatus !== undefined) memberFields.maritalStatus = member.maritalStatus || null;
+      if (member.educationLevel !== undefined) memberFields.educationLevel = member.educationLevel || null;
+      if (member.currentEducationEnrolment !== undefined) memberFields.currentEducationEnrolment = member.currentEducationEnrolment || null;
+      if (member.professionalCertifications !== undefined) memberFields.professionalCertifications = member.professionalCertifications || null;
+      if (member.ongoingCertification !== undefined) memberFields.ongoingCertification = member.ongoingCertification || null;
+      if (member.professionalSituation !== undefined) memberFields.professionalSituation = member.professionalSituation || null;
+      if (member.employerDetails !== undefined) memberFields.employerDetails = member.employerDetails || null;
+      if (member.incomeType !== undefined) memberFields.incomeType = member.incomeType || null;
+      if (member.narrativeSummary !== undefined) memberFields.narrativeSummary = member.narrativeSummary || null;
+
       if (member.id) {
         await db.update(householdMembers)
-          .set({
-            firstName: member.firstName,
-            lastName: member.lastName,
-            dateOfBirth: memberDateOfBirth,
-            gender: member.gender,
-            relationshipToHead: member.relationshipToHead,
-            nationalId: member.nationalId || null,
-            disabilityStatus: member.disabilityStatus,
-            isHead: member.isHead,
-          })
+          .set(memberFields)
           .where(eq(householdMembers.id, member.id));
       } else {
         await db.insert(householdMembers).values({
           householdId: id,
-          firstName: member.firstName,
-          lastName: member.lastName,
-          dateOfBirth: memberDateOfBirth,
-          gender: member.gender,
-          relationshipToHead: member.relationshipToHead,
-          nationalId: member.nationalId || null,
-          disabilityStatus: member.disabilityStatus,
-          isHead: member.isHead,
+          ...memberFields,
         });
       }
     }
@@ -850,6 +855,15 @@ export class DatabaseStorage implements IStorage {
       if (householdUpdate.permanentSecretaryComments !== undefined) updateData.permanentSecretaryComments = householdUpdate.permanentSecretaryComments;
       if (householdUpdate.ministerDecision !== undefined) updateData.ministerDecision = householdUpdate.ministerDecision;
       if (householdUpdate.ministerComments !== undefined) updateData.ministerComments = householdUpdate.ministerComments;
+      // Assessment fields (set by social worker)
+      if (householdUpdate.assessmentNotes !== undefined) updateData.assessmentNotes = householdUpdate.assessmentNotes;
+      if (householdUpdate.householdAssets !== undefined) updateData.householdAssets = householdUpdate.householdAssets;
+      if (householdUpdate.recommendation !== undefined) updateData.recommendation = householdUpdate.recommendation;
+      if (householdUpdate.amountAllocation !== undefined) updateData.amountAllocation = householdUpdate.amountAllocation;
+      if (householdUpdate.durationMonths !== undefined) updateData.durationMonths = householdUpdate.durationMonths;
+      if (householdUpdate.transferModality !== undefined) updateData.transferModality = householdUpdate.transferModality;
+      if (householdUpdate.complementaryActivities !== undefined) updateData.complementaryActivities = householdUpdate.complementaryActivities;
+      if (householdUpdate.recommendationComments !== undefined) updateData.recommendationComments = householdUpdate.recommendationComments;
       
       const result = await tx.update(households)
         .set(updateData)
@@ -879,7 +893,7 @@ export class DatabaseStorage implements IStorage {
     
     const updateData: Partial<Household> = {
       assessmentStep: 'coordinator',
-      programStatus: 'pending_assessment',
+      programStatus: 'pending_coordinator',
       currentCycleNumber: newCycleNumber,
     };
     
