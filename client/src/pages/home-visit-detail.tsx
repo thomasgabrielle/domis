@@ -733,8 +733,50 @@ export function HomeVisitDetail() {
                       </Select>
                     </div>
                     <div className="space-y-2">
+                      <Label>Current Enrolment</Label>
+                      <Input
+                        value={member.currentEducationEnrolment}
+                        onChange={(e) => {
+                          const newMembers = [...members];
+                          newMembers[index].currentEducationEnrolment = e.target.value;
+                          setMembers(newMembers);
+                        }}
+                        placeholder="Current education enrolment"
+                        data-testid={`input-enrolment-${index}`}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Professional Certifications</Label>
+                      <Input
+                        value={member.professionalCertifications.join(", ")}
+                        onChange={(e) => {
+                          const newMembers = [...members];
+                          newMembers[index].professionalCertifications = e.target.value ? e.target.value.split(",").map(s => s.trim()) : [];
+                          setMembers(newMembers);
+                        }}
+                        placeholder="Certifications (comma-separated)"
+                        data-testid={`input-certifications-${index}`}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Ongoing Certification</Label>
+                      <Input
+                        value={member.ongoingCertification}
+                        onChange={(e) => {
+                          const newMembers = [...members];
+                          newMembers[index].ongoingCertification = e.target.value;
+                          setMembers(newMembers);
+                        }}
+                        placeholder="Ongoing certification"
+                        data-testid={`input-ongoing-cert-${index}`}
+                      />
+                    </div>
+
+                    {/* Employment & Income */}
+                    <p className="text-xs font-semibold text-muted-foreground md:col-span-3 mt-2 mb-0">Employment & Income</p>
+                    <div className="space-y-2">
                       <Label>Professional Situation</Label>
-                      <Select 
+                      <Select
                         value={member.professionalSituation}
                         onValueChange={(value) => {
                           const newMembers = [...members];
@@ -757,6 +799,94 @@ export function HomeVisitDetail() {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Employer Details</Label>
+                      <Input
+                        value={member.employerDetails}
+                        onChange={(e) => {
+                          const newMembers = [...members];
+                          newMembers[index].employerDetails = e.target.value;
+                          setMembers(newMembers);
+                        }}
+                        placeholder="Employer name / details"
+                        data-testid={`input-employer-${index}`}
+                      />
+                    </div>
+
+                    {/* Income Sources */}
+                    <div className="md:col-span-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-xs font-semibold text-muted-foreground">Income Sources</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1"
+                          onClick={() => {
+                            const newMembers = [...members];
+                            newMembers[index].incomeType = [...newMembers[index].incomeType, { type: '', monthlyAmount: '', justificationProvided: '' }];
+                            setMembers(newMembers);
+                          }}
+                        >
+                          <Plus className="h-3 w-3" /> Add Income
+                        </Button>
+                      </div>
+                      {member.incomeType.length === 0 && (
+                        <p className="text-sm text-muted-foreground italic">No income sources recorded.</p>
+                      )}
+                      {member.incomeType.map((income, incIdx) => (
+                        <div key={incIdx} className="flex items-end gap-2 mb-2">
+                          <div className="flex-1 space-y-1">
+                            <Label className="text-xs">Type</Label>
+                            <Select
+                              value={income.type}
+                              onValueChange={(value) => {
+                                const newMembers = [...members];
+                                newMembers[index].incomeType[incIdx].type = value;
+                                setMembers(newMembers);
+                              }}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {INCOME_TYPE_OPTIONS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="w-32 space-y-1">
+                            <Label className="text-xs">Monthly ($)</Label>
+                            <Input
+                              className="h-9"
+                              type="number"
+                              value={income.monthlyAmount}
+                              onChange={(e) => {
+                                const newMembers = [...members];
+                                newMembers[index].incomeType[incIdx].monthlyAmount = e.target.value;
+                                setMembers(newMembers);
+                              }}
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              const newMembers = [...members];
+                              newMembers[index].incomeType.splice(incIdx, 1);
+                              setMembers(newMembers);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+
                     <div className="flex items-center space-x-2 md:col-span-3">
                       <Checkbox
                         id={`disability-${index}`}
