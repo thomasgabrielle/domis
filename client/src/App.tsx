@@ -26,6 +26,7 @@ import { AdminForms } from "@/pages/admin/forms";
 import { AdminBITools } from "@/pages/admin/bi-tools";
 import { AdminInterop } from "@/pages/admin/interop";
 import { AdminRoles } from "@/pages/admin/roles";
+import { AdminActiveSessions } from "@/pages/admin/active-sessions";
 
 function Router() {
   return (
@@ -158,6 +159,12 @@ function Router() {
       <Route path="/admin/interop">
         <ProtectedRoute permission="admin.view">
           <AdminInterop />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/admin/sessions">
+        <ProtectedRoute permission="admin.view">
+          <AdminActiveSessions />
         </ProtectedRoute>
       </Route>
 

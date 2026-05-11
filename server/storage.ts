@@ -103,6 +103,10 @@ export interface IStorage {
   getRolePermissions(roleId: string): Promise<Permission[]>;
   setRolePermissions(roleId: string, permissionIds: string[]): Promise<void>;
   
+  // Sessions
+  getActiveSessions(): Promise<any[]>;
+  deleteSession(sid: string): Promise<void>;
+
   // Seed data
   seedRolesAndPermissions(): Promise<void>;
   
@@ -728,6 +732,31 @@ export class DatabaseStorage implements IStorage {
       await db.insert(rolePermissions)
         .values(permissionIds.map(permissionId => ({ roleId, permissionId })));
     }
+  }
+
+  // Active sessions
+  async getActiveSessions(): Promise<any[]> {
+    const result = await pool.query(
+      `SELECT s.sid, s.sess::text, s.expire, u.id as user_id, u.username, u.full_name, u.role, u.department, u.district
+       FROM session s
+       LEFT JOIN users u ON u.id = (s.sess::json->'passport'->>'user')
+       WHERE s.expire > NOW()
+       ORDER BY s.expire DESC`
+    );
+    return result.rows.map((row: any) => ({
+      sid: row.sid,
+      userId: row.user_id,
+      username: row.username,
+      fullName: row.full_name,
+      role: row.role,
+      department: row.department,
+      district: row.district,
+      expire: row.expire,
+    }));
+  }
+
+  async deleteSession(sid: string): Promise<void> {
+    await pool.query(`DELETE FROM session WHERE sid = $1`, [sid]);
   }
 
   // Seed roles and permissions (11 roles per authorization matrix)

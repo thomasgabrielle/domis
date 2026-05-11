@@ -1,13 +1,14 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { 
-  Users, 
-  LayoutTemplate, 
-  Settings, 
-  FileText, 
-  BarChart, 
-  Network, 
-  Shield
+import {
+  Users,
+  LayoutTemplate,
+  Settings,
+  FileText,
+  BarChart,
+  Network,
+  Shield,
+  Radio
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -23,6 +24,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { href: "/admin/programs", label: "Programs & Activities", icon: LayoutTemplate },
     { href: "/admin/settings", label: "System Settings", icon: Settings },
     { href: "/admin/forms", label: "Form Builder", icon: FileText },
+    { href: "/admin/sessions", label: "Active Sessions", icon: Radio },
     { href: "/admin/bi-tools", label: "BI & Reports", icon: BarChart },
     { href: "/admin/interop", label: "Data Exchange", icon: Network },
   ];

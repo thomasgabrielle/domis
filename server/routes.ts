@@ -592,6 +592,26 @@ export async function registerRoutes(
     }
   });
 
+  // ===== ACTIVE SESSIONS =====
+
+  app.get("/api/admin/active-sessions", requireAuth, requirePermission("admin.view"), async (req, res) => {
+    try {
+      const sessions = await storage.getActiveSessions();
+      res.json(sessions);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/active-sessions/:sid", requireAuth, requirePermission("admin.delete"), async (req, res) => {
+    try {
+      await storage.deleteSession(req.params.sid);
+      res.json({ message: "Session terminated" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ===== ROLES & PERMISSIONS =====
 
   // Seed roles and permissions (admin only)
