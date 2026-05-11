@@ -63,6 +63,7 @@ export const users = pgTable("users", {
   roleId: varchar("role_id").references(() => roles.id), // FK to RBAC roles table
   role: text("role").notNull().default("case_worker"),   // legacy text role kept for backward compat
   department: text("department"),
+  district: text("district"),                            // assigned district for VCC clerks (nullable for other roles)
   status: text("status").notNull().default("active"),    // active | inactive
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

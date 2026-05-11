@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pkg from "pg";
 const { Pool } = pkg;
 import { eq, desc, and, ne, sql } from "drizzle-orm";
+import bcrypt from "bcrypt";
 import { 
   users, households, householdMembers, assessments, grievances, 
   payments, programs, caseActivities, roles, permissions, rolePermissions, workflowHistory,
@@ -20,7 +21,7 @@ import {
 } from "@shared/schema";
 
 const isLocal = process.env.DATABASE_URL?.includes("localhost") || process.env.DATABASE_URL?.includes("127.0.0.1");
-const pool = new Pool({
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL!,
   ...(!isLocal && { ssl: { rejectUnauthorized: false } }),
 });
@@ -126,7 +127,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const result = await db.insert(users).values(insertUser).returning();
+    const hashedPassword = await bcrypt.hash(insertUser.password, 10);
+    const result = await db.insert(users).values({ ...insertUser, password: hashedPassword }).returning();
     return result[0];
   }
 
@@ -135,8 +137,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: string, userData: Partial<InsertUser>): Promise<User> {
+    const dataToUpdate = { ...userData };
+    if (dataToUpdate.password) {
+      dataToUpdate.password = await bcrypt.hash(dataToUpdate.password, 10);
+    }
     const result = await db.update(users)
-      .set(userData)
+      .set(dataToUpdate)
       .where(eq(users.id, id))
       .returning();
     return result[0];
@@ -158,6 +164,37 @@ export class DatabaseStorage implements IStorage {
       ...r.user,
       roleData: r.role || undefined
     }));
+  }
+
+  async getUserWithPermissions(id: string): Promise<Express.User | undefined> {
+    const user = await this.getUser(id);
+    if (!user) return undefined;
+
+    let roleName: string | null = null;
+    let roleDisplayName: string | null = null;
+    let permissionNames: string[] = [];
+
+    if (user.roleId) {
+      const role = await this.getRole(user.roleId);
+      if (role) {
+        roleName = role.name;
+        roleDisplayName = role.displayName;
+        const perms = await this.getRolePermissions(role.id);
+        permissionNames = perms.map((p: Permission) => p.name);
+      }
+    }
+
+    return {
+      id: user.id,
+      username: user.username,
+      fullName: user.fullName,
+      email: user.email,
+      department: user.department,
+      district: user.district,
+      status: user.status,
+      role: roleName ? { name: roleName, displayName: roleDisplayName || roleName } : null,
+      permissions: permissionNames,
+    };
   }
 
   // Households
@@ -693,98 +730,212 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Seed roles and permissions
+  // Seed roles and permissions (11 roles per authorization matrix)
   async seedRolesAndPermissions(): Promise<void> {
+    // Clear existing data to allow re-seeding with updated matrix
     const existingRoles = await this.getAllRoles();
-    if (existingRoles.length > 0) return;
+    if (existingRoles.length > 0) {
+      // Delete role_permissions, permissions, roles in order
+      await db.delete(rolePermissions);
+      await db.delete(permissions);
+      await db.delete(roles);
+    }
 
     const defaultRoles: InsertRole[] = [
-      { name: "system_admin", displayName: "System Administrator", description: "Full system access, user management, system configuration", isSystemRole: true },
-      { name: "program_manager", displayName: "Program Manager", description: "Oversee programs, view reports, approve assessments, manage case workers", isSystemRole: true },
-      { name: "case_worker", displayName: "Case Worker / Social Worker", description: "Register applications, conduct assessments, manage cases, record payments", isSystemRole: true },
-      { name: "data_entry", displayName: "Data Entry Clerk", description: "Limited to data entry for intake and basic updates", isSystemRole: true },
-      { name: "viewer", displayName: "Viewer / Auditor", description: "Read-only access for monitoring and auditing", isSystemRole: true },
+      { name: "vcc_clerk", displayName: "VCC Clerk", description: "Village Council Clerk - intake and basic client view", isSystemRole: true },
+      { name: "social_welfare_officer", displayName: "Social Welfare Officer", description: "Full intake/application management, home visit view, assessments, recommendations", isSystemRole: true },
+      { name: "dss_secretary", displayName: "DSS Secretary", description: "Full intake management, application view, home visit view", isSystemRole: true },
+      { name: "system_admin", displayName: "System Administrator", description: "Full system access including admin and form builder", isSystemRole: true },
+      { name: "director", displayName: "Director", description: "Full intake, application view, assessments, recommendations with request info", isSystemRole: true },
+      { name: "coordinator", displayName: "Coordinator", description: "Full intake, application view, assessments, recommendations with request info", isSystemRole: true },
+      { name: "permanent_secretary", displayName: "Permanent Secretary", description: "Home visit view, assessments, recommendations with request info", isSystemRole: true },
+      { name: "minister", displayName: "Minister", description: "Home visit view, assessments, recommendations with request info", isSystemRole: true },
+      { name: "seoa_accounts", displayName: "SEOA Accounts", description: "Assessment view, full payment management", isSystemRole: true },
+      { name: "votes_clerk", displayName: "Votes Clerk", description: "Full payment management", isSystemRole: true },
+      { name: "applicant", displayName: "Applicant", description: "Self-service intake creation only", isSystemRole: true },
     ];
 
     const defaultPermissions: InsertPermission[] = [
-      { name: "dashboard.view", displayName: "View Dashboard", description: "Access to view the dashboard", module: "Dashboard" },
-      { name: "intake.view", displayName: "View Intake", description: "Access to view intake forms", module: "Intake" },
-      { name: "intake.create", displayName: "Create Intake", description: "Create new applications", module: "Intake" },
-      { name: "intake.edit", displayName: "Edit Intake", description: "Edit existing applications", module: "Intake" },
-      { name: "assessments.view", displayName: "View Assessments", description: "View assessments", module: "Assessments" },
-      { name: "assessments.create", displayName: "Create Assessments", description: "Create new assessments", module: "Assessments" },
-      { name: "assessments.approve", displayName: "Approve Assessments", description: "Approve/reject assessments", module: "Assessments" },
-      { name: "applications.view", displayName: "View Applications", description: "View applications list", module: "Applications" },
-      { name: "applications.edit", displayName: "Edit Applications", description: "Edit application details", module: "Applications" },
-      { name: "registry.view", displayName: "View Registry", description: "View single registry", module: "Registry" },
-      { name: "registry.export", displayName: "Export Registry", description: "Export registry data", module: "Registry" },
-      { name: "cases.view", displayName: "View Cases", description: "View case management", module: "Case Management" },
-      { name: "cases.create", displayName: "Create Case Activities", description: "Log case activities", module: "Case Management" },
-      { name: "cases.assign", displayName: "Assign Cases", description: "Assign cases to workers", module: "Case Management" },
-      { name: "payments.view", displayName: "View Payments", description: "View payment records", module: "Payments" },
-      { name: "payments.create", displayName: "Create Payments", description: "Create payment records", module: "Payments" },
-      { name: "payments.approve", displayName: "Approve Payments", description: "Approve payment disbursements", module: "Payments" },
-      { name: "grievances.view", displayName: "View Grievances", description: "View grievance records", module: "Grievances" },
-      { name: "grievances.create", displayName: "Create Grievances", description: "Submit grievances", module: "Grievances" },
-      { name: "grievances.resolve", displayName: "Resolve Grievances", description: "Resolve grievance cases", module: "Grievances" },
-      { name: "reports.view", displayName: "View Reports", description: "Access M&E reports", module: "M&E Reports" },
-      { name: "reports.export", displayName: "Export Reports", description: "Export report data", module: "M&E Reports" },
-      { name: "admin.users", displayName: "Manage Users", description: "Create, edit, delete users", module: "Administration" },
-      { name: "admin.roles", displayName: "Manage Roles", description: "Create, edit roles and permissions", module: "Administration" },
-      { name: "admin.programs", displayName: "Manage Programs", description: "Create, edit assistance programs", module: "Administration" },
-      { name: "admin.settings", displayName: "System Settings", description: "Configure system settings", module: "Administration" },
+      // Dashboard
+      { name: "dashboard.view", displayName: "View Dashboard", description: "Access the main dashboard", module: "Dashboard" },
+      // Intake
+      { name: "intake.create", displayName: "Create Intake", description: "Create new applications via intake form", module: "Intake" },
+      { name: "intake.view", displayName: "View Intake", description: "View intake records", module: "Intake" },
+      { name: "intake.edit", displayName: "Edit Intake", description: "Edit intake records", module: "Intake" },
+      { name: "intake.delete", displayName: "Delete Intake", description: "Delete intake records", module: "Intake" },
+      // Application
+      { name: "application.create", displayName: "Create Application", description: "Create applications", module: "Application" },
+      { name: "application.view", displayName: "View Application", description: "View application details and list", module: "Application" },
+      { name: "application.edit", displayName: "Edit Application", description: "Edit application details", module: "Application" },
+      { name: "application.delete", displayName: "Delete Application", description: "Delete applications", module: "Application" },
+      // Home Visit
+      { name: "home_visit.view", displayName: "View Home Visit", description: "View home visit forms and data", module: "Home Visit" },
+      // Assessment
+      { name: "assessment.view", displayName: "View Assessment", description: "View assessment module and workflow history", module: "Assessment" },
+      // Recommendation
+      { name: "recommendation.create", displayName: "Create Recommendation", description: "Create recommendations and decisions in workflow", module: "Recommendation" },
+      { name: "recommendation.view", displayName: "View Recommendation", description: "View recommendations", module: "Recommendation" },
+      { name: "recommendation.request_info", displayName: "Request Information", description: "Send applications back for more information", module: "Recommendation" },
+      // Payment
+      { name: "payment.create", displayName: "Create Payment", description: "Create payment records", module: "Payment" },
+      { name: "payment.view", displayName: "View Payment", description: "View payment records", module: "Payment" },
+      { name: "payment.edit", displayName: "Edit Payment", description: "Edit payment records", module: "Payment" },
+      { name: "payment.delete", displayName: "Delete Payment", description: "Delete payment records", module: "Payment" },
+      // Client
+      { name: "client.view", displayName: "View Client", description: "Full view of client registry", module: "Client" },
+      { name: "client.view_partial", displayName: "Partial View Client", description: "Limited view of client registry", module: "Client" },
+      // Admin
+      { name: "admin.create", displayName: "Create Admin Resources", description: "Create users, roles, and system resources", module: "Admin" },
+      { name: "admin.view", displayName: "View Admin", description: "View admin module", module: "Admin" },
+      { name: "admin.edit", displayName: "Edit Admin Resources", description: "Edit users, roles, and system resources", module: "Admin" },
+      { name: "admin.delete", displayName: "Delete Admin Resources", description: "Delete users, roles, and system resources", module: "Admin" },
+      // Form Builder
+      { name: "form_builder.create", displayName: "Create Forms", description: "Create form definitions", module: "Form Builder" },
+      { name: "form_builder.view", displayName: "View Forms", description: "View form definitions", module: "Form Builder" },
+      { name: "form_builder.edit", displayName: "Edit Forms", description: "Edit form definitions", module: "Form Builder" },
+      { name: "form_builder.delete", displayName: "Delete Forms", description: "Delete form definitions", module: "Form Builder" },
     ];
 
+    // Create roles
     const createdRoles: Role[] = [];
     for (const role of defaultRoles) {
       const created = await this.createRole(role);
       createdRoles.push(created);
     }
 
+    // Create permissions
     const createdPermissions: Permission[] = [];
-    for (const permission of defaultPermissions) {
-      const created = await this.createPermission(permission);
+    for (const perm of defaultPermissions) {
+      const created = await this.createPermission(perm);
       createdPermissions.push(created);
     }
 
-    const allPermissionIds = createdPermissions.map(p => p.id);
-    const viewOnlyPermissions = createdPermissions.filter(p => p.name.endsWith(".view")).map(p => p.id);
-    const caseWorkerPermissions = createdPermissions.filter(p => 
-      !p.name.startsWith("admin.") && 
-      !p.name.endsWith(".approve") &&
-      !p.name.includes("assign")
-    ).map(p => p.id);
-    const dataEntryPermissions = createdPermissions.filter(p =>
-      p.name === "dashboard.view" ||
-      p.name.startsWith("intake.") ||
-      p.name === "applications.view"
-    ).map(p => p.id);
-    const managerPermissions = createdPermissions.filter(p =>
-      !p.name.startsWith("admin.users") &&
-      !p.name.startsWith("admin.roles") &&
-      !p.name.startsWith("admin.settings")
-    ).map(p => p.id);
+    // Build a name→id lookup
+    const permId = (name: string) => {
+      const p = createdPermissions.find(cp => cp.name === name);
+      if (!p) throw new Error(`Permission not found: ${name}`);
+      return p.id;
+    };
+    const allPermIds = createdPermissions.map(p => p.id);
+
+    // Role → permission mapping (from authorization matrix)
+    const rolePermMap: Record<string, string[]> = {
+      vcc_clerk: [
+        "intake.create", "intake.view",
+        "client.view_partial",
+        "dashboard.view",
+      ],
+      social_welfare_officer: [
+        "intake.create", "intake.view", "intake.edit", "intake.delete",
+        "application.create", "application.view", "application.edit", "application.delete",
+        "home_visit.view",
+        "assessment.view",
+        "recommendation.create", "recommendation.view",
+        "client.view",
+        "dashboard.view",
+      ],
+      dss_secretary: [
+        "intake.create", "intake.view", "intake.edit", "intake.delete",
+        "application.view",
+        "home_visit.view",
+        "client.view",
+        "dashboard.view",
+      ],
+      system_admin: [], // gets ALL permissions
+      director: [
+        "intake.create", "intake.view", "intake.edit", "intake.delete",
+        "application.view",
+        "home_visit.view",
+        "assessment.view",
+        "recommendation.create", "recommendation.view", "recommendation.request_info",
+        "client.view",
+        "dashboard.view",
+      ],
+      coordinator: [
+        "intake.create", "intake.view", "intake.edit", "intake.delete",
+        "application.view",
+        "home_visit.view",
+        "assessment.view",
+        "recommendation.create", "recommendation.view", "recommendation.request_info",
+        "client.view",
+        "dashboard.view",
+      ],
+      permanent_secretary: [
+        "home_visit.view",
+        "assessment.view",
+        "recommendation.create", "recommendation.view", "recommendation.request_info",
+        "client.view",
+        "dashboard.view",
+      ],
+      minister: [
+        "home_visit.view",
+        "assessment.view",
+        "recommendation.create", "recommendation.view", "recommendation.request_info",
+        "client.view",
+        "dashboard.view",
+      ],
+      seoa_accounts: [
+        "assessment.view",
+        "payment.create", "payment.view", "payment.edit", "payment.delete",
+        "client.view",
+        "dashboard.view",
+      ],
+      votes_clerk: [
+        "payment.create", "payment.view", "payment.edit", "payment.delete",
+        "client.view",
+        "dashboard.view",
+      ],
+      applicant: [
+        "intake.create",
+      ],
+    };
 
     for (const role of createdRoles) {
-      let permissionIds: string[] = [];
-      switch (role.name) {
-        case "system_admin":
-          permissionIds = allPermissionIds;
-          break;
-        case "program_manager":
-          permissionIds = managerPermissions;
-          break;
-        case "case_worker":
-          permissionIds = caseWorkerPermissions;
-          break;
-        case "data_entry":
-          permissionIds = dataEntryPermissions;
-          break;
-        case "viewer":
-          permissionIds = viewOnlyPermissions;
-          break;
+      let ids: string[];
+      if (role.name === "system_admin") {
+        ids = allPermIds;
+      } else {
+        const permNames = rolePermMap[role.name] || [];
+        ids = permNames.map(permId);
       }
-      await this.setRolePermissions(role.id, permissionIds);
+      await this.setRolePermissions(role.id, ids);
+    }
+
+    // Seed a default admin user
+    const existingAdmin = await this.getUserByUsername("admin");
+    if (!existingAdmin) {
+      const adminRole = createdRoles.find(r => r.name === "system_admin");
+      if (adminRole) {
+        await this.createUser({
+          username: "admin",
+          password: "admin123",
+          fullName: "System Administrator",
+          email: "admin@domis.gov",
+          roleId: adminRole.id,
+          role: "system_admin",
+          department: "IT",
+          status: "active",
+        });
+      }
+    }
+
+    // Seed a VCC Clerk test user with district assignment
+    const existingVccClerk = await this.getUserByUsername("vcc_clerk_capital");
+    if (!existingVccClerk) {
+      const vccRole = createdRoles.find(r => r.name === "vcc_clerk");
+      if (vccRole) {
+        await this.createUser({
+          username: "vcc_clerk_capital",
+          password: "clerk123",
+          fullName: "Capital District VCC Clerk",
+          email: "vcc.capital@domis.gov",
+          roleId: vccRole.id,
+          role: "vcc_clerk",
+          department: "Village Council",
+          district: "Capital District",
+          status: "active",
+        });
+      }
     }
   }
 

@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
+import { useAuth } from "@/lib/auth";
 
 type HomeVisitRow = {
   id: string;
@@ -34,6 +35,8 @@ type HomeVisitRow = {
 
 export function HomeVisits() {
   const [, setLocation] = useLocation();
+  const { hasAnyPermission } = useAuth();
+  const canEditVisit = hasAnyPermission("application.edit");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
   const [regionFilter, setRegionFilter] = useState("all");
@@ -310,13 +313,13 @@ export function HomeVisits() {
                         {getStatusBadge(visit.homeVisitStatus)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="sm"
                           onClick={() => setLocation(`/home-visit/${visit.id}`)}
                           data-testid={`button-view-${visit.id}`}
                         >
-                          {visit.homeVisitStatus === 'pending' ? 'Start Visit' : 'View Details'}
+                          {visit.homeVisitStatus === 'pending' && canEditVisit ? 'Start Visit' : 'View Details'}
                           <ChevronRight className="h-4 w-4 ml-1" />
                         </Button>
                       </TableCell>

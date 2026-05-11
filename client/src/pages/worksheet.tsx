@@ -12,6 +12,7 @@ import { Download, Filter, Search, Users, ChevronRight, Plus, Home, AlertTriangl
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/lib/auth";
 
 type ApplicationRow = {
   id: string;
@@ -37,6 +38,10 @@ type ApplicationRow = {
 
 export function Worksheet() {
   const [, setLocation] = useLocation();
+  const { hasAnyPermission, user } = useAuth();
+  const canEditApplication = hasAnyPermission("application.edit");
+  const canCreateIntake = hasAnyPermission("intake.create");
+  const isVccClerk = user?.role?.name === 'vcc_clerk';
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [regionFilter, setRegionFilter] = useState("all");
@@ -239,14 +244,22 @@ export function Worksheet() {
             <p className="text-muted-foreground">Complete list of all registered applications awaiting assessment.</p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => setLocation('/registration')} className="gap-2" data-testid="button-new-intake">
-              <Plus className="h-4 w-4" /> New Intake
-            </Button>
+            {canCreateIntake && (
+              <Button onClick={() => setLocation('/registration')} className="gap-2" data-testid="button-new-intake">
+                <Plus className="h-4 w-4" /> New Intake
+              </Button>
+            )}
             <Button variant="outline" className="gap-2" data-testid="button-export">
               <Download className="h-4 w-4" /> Export to CSV
             </Button>
           </div>
         </div>
+
+        {isVccClerk && user?.district && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+            Showing applications for <strong>{user.district}</strong> only.
+          </div>
+        )}
 
         {/* Stats Summary */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -485,9 +498,9 @@ export function Worksheet() {
                           {getStatusBadge(app.status)}
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
-                          {app.status === 'awaiting_home_visit' ? (
-                            <Button 
-                              size="sm" 
+                          {app.status === 'awaiting_home_visit' && canEditApplication ? (
+                            <Button
+                              size="sm"
                               variant="outline"
                               className="gap-1 text-xs hover:cursor-pointer"
                               onClick={() => setLocation(`/home-visit/${app.id}`)}

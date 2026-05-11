@@ -47,6 +47,7 @@ import {
 import { Link } from "wouter";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/lib/auth";
 
 /* ────────────────────────────────────────────────────────────────────────────
  * WORKFLOW CONFIGURATION
@@ -69,6 +70,31 @@ type WorkflowStep = typeof WORKFLOW_STEPS[number]['id'];
 export function Assessments() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { hasAnyPermission, user } = useAuth();
+
+  /* ── Permission flags ──────────────────────────────────────────────────
+   * canEditAssessment — Social Welfare Officer can fill in the SW assessment
+   *   form. Distinguished by having `application.edit` which reviewers lack.
+   *
+   * canActOnStep(step) — Each reviewer role can only act on their own
+   *   workflow step (e.g. Director can only decide on the Director tab).
+   *   System admin can act on any step.
+   * ───────────────────────────────────────────────────────────────────── */
+  const canEditAssessment = hasAnyPermission("application.edit");
+
+  const ROLE_TO_STEP: Record<string, WorkflowStep> = {
+    social_welfare_officer: 'social_worker',
+    coordinator: 'coordinator',
+    director: 'director',
+    permanent_secretary: 'permanent_secretary',
+    minister: 'minister',
+  };
+
+  const canActOnStep = (step: WorkflowStep): boolean => {
+    if (user?.role?.name === 'system_admin') return true;
+    if (step === 'social_worker') return canEditAssessment;
+    return ROLE_TO_STEP[user?.role?.name || ''] === step;
+  };
 
   /* ── Dialog & selection state ─────────────────────────────────────────── */
   /** The household (application) currently being reviewed / viewed */
@@ -124,12 +150,14 @@ export function Assessments() {
    * programStatus='pending_assessment' but no assessmentStep set yet.
    * ───────────────────────────────────────────────────────────────────── */
   const getApplicationsByStep = (step: WorkflowStep) => {
-    return households.filter((h: any) => h.assessmentStep === step);
+    return households.filter((h: any) => h.assessmentStep === step && h.homeVisitStatus === 'completed');
   };
 
   const socialWorkerApps = households.filter((h: any) =>
-    h.assessmentStep === 'social_worker' ||
-    (h.programStatus === 'pending_assessment' && !h.assessmentStep)
+    h.homeVisitStatus === 'completed' && (
+      h.assessmentStep === 'social_worker' ||
+      (h.programStatus === 'pending_assessment' && !h.assessmentStep)
+    )
   );
   const coordinatorApps = getApplicationsByStep('coordinator');
   const directorApps = getApplicationsByStep('director');
@@ -515,14 +543,30 @@ export function Assessments() {
         </div>
         
         <div className="w-full lg:w-48 flex flex-col justify-center">
-          <Button
-            className="w-full gap-2"
-            onClick={() => handleOpenReview(household, step)}
-            disabled={progressAssessmentMutation.isPending}
-            data-testid={`button-review-${household.id}`}
-          >
-            {step === 'social_worker' ? 'Assess Application' : 'Review Assessment'}
-          </Button>
+          {/* SW step: "Assess" only for social workers with application.edit;
+              Reviewer steps: "Review" only for users with recommendation.create;
+              Otherwise: "View" button opens a read-only dialog */}
+          {step === 'social_worker' ? (
+            <Button
+              className="w-full gap-2"
+              onClick={() => handleOpenReview(household, step)}
+              disabled={progressAssessmentMutation.isPending}
+              variant={canActOnStep(step) ? "default" : "outline"}
+              data-testid={`button-review-${household.id}`}
+            >
+              {canActOnStep(step) ? 'Assess Application' : 'View Assessment'}
+            </Button>
+          ) : (
+            <Button
+              className="w-full gap-2"
+              onClick={() => handleOpenReview(household, step)}
+              disabled={progressAssessmentMutation.isPending}
+              variant={canActOnStep(step) ? "default" : "outline"}
+              data-testid={`button-review-${household.id}`}
+            >
+              {canActOnStep(step) ? 'Review Assessment' : 'View Assessment'}
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -851,7 +895,7 @@ export function Assessments() {
                 </div>
                 
                 {/* ── Conditional content: SW form vs Reviewer decision ────── */}
-                {currentStep === 'social_worker' ? (
+                {currentStep === 'social_worker' && canEditAssessment ? (
                   <>
                     {/* Alert banner — visible when a reviewer returned the application for more info */}
                     {selectedHousehold.programStatus === 'pending_additional_info' && (
@@ -1052,78 +1096,81 @@ export function Assessments() {
                       </div>
                     )}
 
-                    <Separator />
+                    {/* Decision form — only for the reviewer whose role matches this step */}
+                    {canActOnStep(currentStep) && currentStep !== 'social_worker' && (
+                      <>
+                        <Separator />
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold">Your Decision</h3>
 
-                    {/* Current reviewer's decision form (Agree / Disagree / More Info + comments) */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Your Decision</h3>
-
-                      <div className="space-y-2">
-                        <Label>Decision</Label>
-                        <Select value={decision} onValueChange={(v: 'agree' | 'disagree' | 'requires_further_info') => setDecision(v)}>
-                          <SelectTrigger data-testid="select-decision">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {currentStep === 'minister' ? (
-                              <>
-                                <SelectItem value="agree">
+                          <div className="space-y-2">
+                            <Label>Decision</Label>
+                            <Select value={decision} onValueChange={(v: 'agree' | 'disagree' | 'requires_further_info') => setDecision(v)}>
+                              <SelectTrigger data-testid="select-decision">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {currentStep === 'minister' ? (
+                                  <>
+                                    <SelectItem value="agree">
+                                      <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                        <span>Approve Application</span>
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="disagree">
+                                      <div className="flex items-center gap-2">
+                                        <XCircle className="h-4 w-4 text-red-600" />
+                                        <span>Reject Application</span>
+                                      </div>
+                                    </SelectItem>
+                                  </>
+                                ) : (
+                                  <>
+                                    <SelectItem value="agree">
+                                      <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                        <span>Agree - Approve and move to next step</span>
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="disagree">
+                                      <div className="flex items-center gap-2">
+                                        <XCircle className="h-4 w-4 text-red-600" />
+                                        <span>Disagree - Reject but move to next step</span>
+                                      </div>
+                                    </SelectItem>
+                                  </>
+                                )}
+                                <SelectItem value="requires_further_info">
                                   <div className="flex items-center gap-2">
-                                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                                    <span>Approve Application</span>
+                                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                                    <span>Requires More Information - Return to Social Worker</span>
                                   </div>
                                 </SelectItem>
-                                <SelectItem value="disagree">
-                                  <div className="flex items-center gap-2">
-                                    <XCircle className="h-4 w-4 text-red-600" />
-                                    <span>Reject Application</span>
-                                  </div>
-                                </SelectItem>
-                              </>
-                            ) : (
-                              <>
-                                <SelectItem value="agree">
-                                  <div className="flex items-center gap-2">
-                                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                                    <span>Agree - Approve and move to next step</span>
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="disagree">
-                                  <div className="flex items-center gap-2">
-                                    <XCircle className="h-4 w-4 text-red-600" />
-                                    <span>Disagree - Reject but move to next step</span>
-                                  </div>
-                                </SelectItem>
-                              </>
-                            )}
-                            <SelectItem value="requires_further_info">
-                              <div className="flex items-center gap-2">
-                                <AlertCircle className="h-4 w-4 text-amber-600" />
-                                <span>Requires More Information - Return to Social Worker</span>
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-                      <div className="space-y-2">
-                        <Label>Comments</Label>
-                        <Textarea
-                          value={comments}
-                          onChange={(e) => setComments(e.target.value)}
-                          placeholder="Add your review comments..."
-                          rows={4}
-                          data-testid="textarea-comments"
-                        />
-                      </div>
+                          <div className="space-y-2">
+                            <Label>Comments</Label>
+                            <Textarea
+                              value={comments}
+                              onChange={(e) => setComments(e.target.value)}
+                              placeholder="Add your review comments..."
+                              rows={4}
+                              data-testid="textarea-comments"
+                            />
+                          </div>
 
-                      {decision === 'requires_further_info' && (
-                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                          <AlertCircle className="h-4 w-4 inline mr-2" />
-                          This will return the application to the Social Worker for additional information.
+                          {decision === 'requires_further_info' && (
+                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                              <AlertCircle className="h-4 w-4 inline mr-2" />
+                              This will return the application to the Social Worker for additional information.
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -1139,9 +1186,10 @@ export function Assessments() {
                 setReviewDialogOpen(false);
                 setSelectedHousehold(null);
               }}>
-                Cancel
+                {!canActOnStep(currentStep) ? 'Close' : 'Cancel'}
               </Button>
-              {currentStep === 'social_worker' ? (
+              {/* SW step: show Save/Submit only if user can edit assessments */}
+              {currentStep === 'social_worker' && canEditAssessment && (
                 <>
                   <Button
                     variant="outline"
@@ -1171,7 +1219,9 @@ export function Assessments() {
                     Save and Send to Coordinator
                   </Button>
                 </>
-              ) : (
+              )}
+              {/* Reviewer steps: show Save/Submit only if user's role matches this step */}
+              {currentStep !== 'social_worker' && canActOnStep(currentStep) && (
                 <>
                   <Button
                     variant="outline"

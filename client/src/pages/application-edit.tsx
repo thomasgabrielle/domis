@@ -14,6 +14,13 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, MapPin, User, Calendar, UserCheck, ArrowLeft, Home } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+const PROVINCE_DISTRICTS: Record<string, string[]> = {
+  "Central Province": ["Capital District", "River District", "Highland District"],
+  "Eastern Province": ["Coastal District", "Valley District", "Lake District"],
+  "Western Province": ["Mountain District", "Plains District", "Forest District"],
+  "Northern Province": ["Border District", "Savanna District", "Desert District"],
+};
+
 type IncomeEntry = {
   type: string;
   monthlyAmount: string;
@@ -92,6 +99,8 @@ export function ApplicationEdit() {
   const [wallType, setWallType] = useState("");
   const [householdAssetsList, setHouseholdAssetsList] = useState<string[]>([]);
   const [homeVisitNotes, setHomeVisitNotes] = useState("");
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ['household', householdId],
@@ -107,6 +116,8 @@ export function ApplicationEdit() {
     if (data) {
       setHouseholdData(data.household);
       setHasProxy(!data.household.isOnOwnBehalf);
+      setSelectedProvince(data.household.province || "");
+      setSelectedDistrict(data.household.district || "");
       setRoofType(data.household.roofType || "");
       setWallType(data.household.wallType || "");
       setHomeVisitNotes(data.household.homeVisitNotes || "");
@@ -303,35 +314,40 @@ export function ApplicationEdit() {
           </div>
         </div>
 
-        {/* Primary Applicant Highlight */}
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-6">
+
+        {/* Primary Applicant */}
         {(() => {
-          const headOfHousehold = members?.find((m) => m.relationshipToHead === 'head');
-          if (!headOfHousehold) return null;
-          const age = headOfHousehold.dateOfBirth
-            ? Math.floor((new Date().getTime() - new Date(headOfHousehold.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+          const headIndex = members.findIndex((m) => m.relationshipToHead === 'head');
+          if (headIndex === -1) return null;
+          const member = members[headIndex];
+          const index = headIndex;
+          const age = member.dateOfBirth
+            ? Math.floor((new Date().getTime() - new Date(member.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
             : null;
           return (
-            <Card className="mb-6 border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
-              <CardContent className="pt-6">
+            <Card className="mb-6">
+              <CardHeader>
                 <div className="flex items-start gap-4">
                   <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center text-2xl font-bold text-primary shrink-0">
-                    {headOfHousehold.firstName?.charAt(0)}{headOfHousehold.lastName?.charAt(0)}
+                    {member.firstName?.charAt(0)}{member.lastName?.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <Badge className="bg-primary text-primary-foreground mb-1">Primary Applicant</Badge>
                     <h2 className="text-2xl font-bold text-foreground">
-                      {headOfHousehold.firstName} {headOfHousehold.lastName}
+                      {member.firstName} {member.lastName}
                     </h2>
                     <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <span className="font-medium">Age:</span> {age || '—'}
                       </span>
                       <span className="flex items-center gap-1">
-                        <span className="font-medium">Sex:</span> <span className="capitalize">{headOfHousehold.gender}</span>
+                        <span className="font-medium">Sex:</span> <span className="capitalize">{member.gender}</span>
                       </span>
                       <span className="flex items-center gap-1">
                         <span className="font-medium">National ID:</span>
-                        <span className="font-mono">{headOfHousehold.nationalId || '—'}</span>
+                        <span className="font-mono">{member.nationalId || '—'}</span>
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-4 mt-1 text-sm text-muted-foreground">
@@ -344,13 +360,286 @@ export function ApplicationEdit() {
                     </div>
                   </div>
                 </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Personal Details */}
+                <p className="text-xs font-semibold text-muted-foreground mb-2">Personal Details</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>First Name</Label>
+                    <Input name={`firstName-${index}`} defaultValue={member.firstName} placeholder="Given Name" required data-testid={`input-firstname-${index}`} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Last Name</Label>
+                    <Input name={`lastName-${index}`} defaultValue={member.lastName} placeholder="Surname" required data-testid={`input-lastname-${index}`} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Date of Birth</Label>
+                    <Input name={`dateOfBirth-${index}`} defaultValue={member.dateOfBirth} type="date" required data-testid={`input-dob-${index}`} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Gender</Label>
+                    <Select name={`gender-${index}`} defaultValue={member.gender} required>
+                      <SelectTrigger data-testid={`select-gender-${index}`}>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>National ID / Ref #</Label>
+                    <Input name={`nationalId-${index}`} defaultValue={member.nationalId} placeholder="ID Number" data-testid={`input-nationalid-${index}`} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Marital Status</Label>
+                    <Select
+                      value={member.maritalStatus}
+                      onValueChange={(value) => {
+                        const newMembers = [...members];
+                        newMembers[index].maritalStatus = value;
+                        setMembers(newMembers);
+                      }}
+                    >
+                      <SelectTrigger data-testid={`select-marital-${index}`}>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="single">Single</SelectItem>
+                        <SelectItem value="married">Married</SelectItem>
+                        <SelectItem value="common_law">Common Law</SelectItem>
+                        <SelectItem value="divorced">Divorced</SelectItem>
+                        <SelectItem value="widowed">Widowed</SelectItem>
+                        <SelectItem value="separated">Separated</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center space-x-2 md:col-span-3">
+                    <Checkbox
+                      id={`disability-${index}`}
+                      checked={member.disabilityStatus}
+                      onCheckedChange={(checked) => {
+                        const newMembers = [...members];
+                        newMembers[index].disabilityStatus = checked === true;
+                        setMembers(newMembers);
+                      }}
+                      data-testid={`checkbox-disability-${index}`}
+                    />
+                    <Label htmlFor={`disability-${index}`} className="cursor-pointer">
+                      Has disability or chronic health condition
+                    </Label>
+                  </div>
+                </div>
+
+                {/* Education (only after home visit) */}
+                {householdData.homeVisitStatus === 'completed' && (
+                  <>
+                    <p className="text-xs font-semibold text-muted-foreground mt-6 mb-2">Education</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Education Level</Label>
+                        <Select
+                          value={member.educationLevel}
+                          onValueChange={(value) => {
+                            const newMembers = [...members];
+                            newMembers[index].educationLevel = value;
+                            setMembers(newMembers);
+                          }}
+                        >
+                          <SelectTrigger data-testid={`select-education-${index}`}>
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No Formal Education</SelectItem>
+                            <SelectItem value="primary">Primary School</SelectItem>
+                            <SelectItem value="secondary">Secondary School</SelectItem>
+                            <SelectItem value="vocational">Vocational Training</SelectItem>
+                            <SelectItem value="tertiary">Tertiary/University</SelectItem>
+                            <SelectItem value="postgraduate">Postgraduate</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Current Enrolment</Label>
+                        <Input
+                          value={member.currentEducationEnrolment}
+                          onChange={(e) => {
+                            const newMembers = [...members];
+                            newMembers[index].currentEducationEnrolment = e.target.value;
+                            setMembers(newMembers);
+                          }}
+                          placeholder="Current education enrolment"
+                          data-testid={`input-enrolment-${index}`}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Professional Certifications</Label>
+                        <Input
+                          value={member.professionalCertifications}
+                          onChange={(e) => {
+                            const newMembers = [...members];
+                            newMembers[index].professionalCertifications = e.target.value;
+                            setMembers(newMembers);
+                          }}
+                          placeholder="Certifications"
+                          data-testid={`input-certifications-${index}`}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Ongoing Certification</Label>
+                        <Input
+                          value={member.ongoingCertification}
+                          onChange={(e) => {
+                            const newMembers = [...members];
+                            newMembers[index].ongoingCertification = e.target.value;
+                            setMembers(newMembers);
+                          }}
+                          placeholder="Ongoing certification"
+                          data-testid={`input-ongoing-cert-${index}`}
+                        />
+                      </div>
+                    </div>
+
+                    <p className="text-xs font-semibold text-muted-foreground mt-6 mb-2">Employment & Income</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Professional Situation</Label>
+                        <Select
+                          value={member.professionalSituation}
+                          onValueChange={(value) => {
+                            const newMembers = [...members];
+                            newMembers[index].professionalSituation = value;
+                            setMembers(newMembers);
+                          }}
+                        >
+                          <SelectTrigger data-testid={`select-profession-${index}`}>
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="employed_full">Employed Full-time</SelectItem>
+                            <SelectItem value="employed_part">Employed Part-time</SelectItem>
+                            <SelectItem value="self_employed">Self-employed</SelectItem>
+                            <SelectItem value="unemployed">Unemployed</SelectItem>
+                            <SelectItem value="student">Student</SelectItem>
+                            <SelectItem value="retired">Retired</SelectItem>
+                            <SelectItem value="homemaker">Homemaker</SelectItem>
+                            <SelectItem value="unable_to_work">Unable to Work</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>Employer Details</Label>
+                        <Input
+                          value={member.employerDetails}
+                          onChange={(e) => {
+                            const newMembers = [...members];
+                            newMembers[index].employerDetails = e.target.value;
+                            setMembers(newMembers);
+                          }}
+                          placeholder="Employer name / details"
+                          data-testid={`input-employer-${index}`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Income Entries */}
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-xs font-semibold text-muted-foreground">Income Sources</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1"
+                          onClick={() => {
+                            const newMembers = [...members];
+                            newMembers[index].incomeType = [...newMembers[index].incomeType, { type: '', monthlyAmount: '' }];
+                            setMembers(newMembers);
+                          }}
+                        >
+                          <Plus className="h-3 w-3" /> Add Income
+                        </Button>
+                      </div>
+                      {member.incomeType.length === 0 && (
+                        <p className="text-sm text-muted-foreground italic">No income sources recorded.</p>
+                      )}
+                      {member.incomeType.map((income, incIdx) => (
+                        <div key={incIdx} className="flex items-end gap-2 mb-2">
+                          <div className="flex-1 space-y-1">
+                            <Label className="text-xs">Type</Label>
+                            <Select
+                              value={income.type}
+                              onValueChange={(value) => {
+                                const newMembers = [...members];
+                                newMembers[index].incomeType[incIdx].type = value;
+                                setMembers(newMembers);
+                              }}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {INCOME_TYPE_OPTIONS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="w-32 space-y-1">
+                            <Label className="text-xs">Monthly ($)</Label>
+                            <Input
+                              className="h-9"
+                              type="number"
+                              value={income.monthlyAmount}
+                              onChange={(e) => {
+                                const newMembers = [...members];
+                                newMembers[index].incomeType[incIdx].monthlyAmount = e.target.value;
+                                setMembers(newMembers);
+                              }}
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              const newMembers = [...members];
+                              newMembers[index].incomeType.splice(incIdx, 1);
+                              setMembers(newMembers);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Narrative Summary */}
+                    <div className="mt-4 space-y-2">
+                      <Label>Notes / Narrative Summary</Label>
+                      <Textarea
+                        value={member.narrativeSummary}
+                        onChange={(e) => {
+                          const newMembers = [...members];
+                          newMembers[index].narrativeSummary = e.target.value;
+                          setMembers(newMembers);
+                        }}
+                        placeholder="Additional notes about the applicant..."
+                        rows={2}
+                        data-testid={`textarea-narrative-${index}`}
+                      />
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           );
         })()}
-
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-6">
 
             {/* Intake Information */}
             <Card>
@@ -599,22 +888,196 @@ export function ApplicationEdit() {
               </CardContent>
             </Card>
 
-            {/* Applicant Information */}
+            {/* Location Section */}
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <User className="h-5 w-5 text-primary" />
-                  <CardTitle>Applicant Information</CardTitle>
+                  <MapPin className="h-5 w-5 text-primary" />
+                  <CardTitle>Location & Address</CardTitle>
                 </div>
-                <CardDescription>Edit details for the applicant and all household members.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="province">Province/Region</Label>
+                  <Select
+                    name="province"
+                    value={selectedProvince}
+                    onValueChange={(value) => {
+                      setSelectedProvince(value);
+                      if (!PROVINCE_DISTRICTS[value]?.includes(selectedDistrict)) {
+                        setSelectedDistrict("");
+                      }
+                    }}
+                    required
+                  >
+                    <SelectTrigger id="province" data-testid="select-province">
+                      <SelectValue placeholder="Select Province" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.keys(PROVINCE_DISTRICTS).map(p => (
+                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="district">District</Label>
+                  <Select
+                    name="district"
+                    value={selectedDistrict}
+                    onValueChange={setSelectedDistrict}
+                    required
+                  >
+                    <SelectTrigger id="district" data-testid="select-district">
+                      <SelectValue placeholder={selectedProvince ? "Select District" : "Select Province first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(PROVINCE_DISTRICTS[selectedProvince] || []).map(d => (
+                        <SelectItem key={d} value={d}>{d}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="village">Village / Community</Label>
+                  <Input id="village" name="village" defaultValue={householdData.village} placeholder="Enter village name" required data-testid="input-village" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gps">GPS Coordinates (Optional)</Label>
+                  <Input id="gps" name="gps" defaultValue={householdData.gpsCoordinates || ''} placeholder="Lat, Long" data-testid="input-gps" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Household Details */}
+            {householdData.homeVisitStatus === 'completed' && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Home className="h-5 w-5 text-primary" />
+                    <CardTitle>Household Details</CardTitle>
+                  </div>
+                  <CardDescription>Housing characteristics and assets collected during the home visit.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="roofType">Roof Type</Label>
+                      <Select value={roofType} onValueChange={setRoofType}>
+                        <SelectTrigger id="roofType" data-testid="select-roof-type">
+                          <SelectValue placeholder="Select roof type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROOF_TYPE_OPTIONS.map(option => (
+                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="wallType">Wall Type</Label>
+                      <Select value={wallType} onValueChange={setWallType}>
+                        <SelectTrigger id="wallType" data-testid="select-wall-type">
+                          <SelectValue placeholder="Select wall type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {WALL_TYPE_OPTIONS.map(option => (
+                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-3 md:col-span-2">
+                      <Label>Household Assets</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {HOUSEHOLD_ASSETS_OPTIONS.map(option => (
+                          <div key={option.value} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`asset-${option.value}`}
+                              checked={householdAssetsList.includes(option.value)}
+                              onCheckedChange={(checked) => {
+                                setHouseholdAssetsList(prev =>
+                                  checked
+                                    ? [...prev, option.value]
+                                    : prev.filter(v => v !== option.value)
+                                );
+                              }}
+                              data-testid={`checkbox-asset-${option.value}`}
+                            />
+                            <Label
+                              htmlFor={`asset-${option.value}`}
+                              className="text-sm font-normal cursor-pointer"
+                            >
+                              {option.label}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="homeVisitNotes">Home Visit Notes</Label>
+                      <Textarea
+                        id="homeVisitNotes"
+                        value={homeVisitNotes}
+                        onChange={(e) => setHomeVisitNotes(e.target.value)}
+                        placeholder="Notes from the home visit..."
+                        rows={3}
+                        data-testid="textarea-home-visit-notes"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Other Household Members */}
+            {members.some((m) => m.relationshipToHead !== 'head') && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <User className="h-5 w-5 text-primary" />
+                    <CardTitle>Other Household Members</CardTitle>
+                  </div>
+                  {householdData.homeVisitStatus === 'completed' && (
+                    <Button type="button" onClick={addMember} variant="outline" size="sm" className="gap-2" data-testid="button-add-member">
+                      <Plus className="h-4 w-4" /> Add Member
+                    </Button>
+                  )}
+                </div>
+                <CardDescription>
+                  {(() => {
+                    const otherCount = members.filter((m) => m.relationshipToHead !== 'head').length;
+                    return householdData.homeVisitStatus === 'completed'
+                      ? `${otherCount} other member(s) — personal details, education, employment and income.`
+                      : `${otherCount} other member(s) in this application.`;
+                  })()}
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {members.map((member, index) => (
+                {members.map((member, index) => {
+                  if (member.relationshipToHead === 'head') return null;
+                  const displayNum = members.filter((m, i) => m.relationshipToHead !== 'head' && i <= index).length;
+                  return (
                   <div key={member.id || index} className="relative">
-                    {index > 0 && <Separator className="my-6" />}
-                    <h3 className="font-medium text-sm uppercase tracking-wide text-muted-foreground mb-4">
-                      {index === 0 ? "Head of Household" : `Member #${index + 1}`}
-                    </h3>
+                    {displayNum > 1 && <Separator className="my-6" />}
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-medium text-sm uppercase tracking-wide text-muted-foreground">
+                        Member #{displayNum}
+                      </h3>
+                      {householdData.homeVisitStatus === 'completed' && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeMember(index)}
+                          className="text-destructive hover:bg-destructive/10"
+                          data-testid={`button-remove-member-${index}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
 
                     {/* Personal Details */}
                     <p className="text-xs font-semibold text-muted-foreground mb-2">Personal Details</p>
@@ -706,352 +1169,201 @@ export function ApplicationEdit() {
                         </Label>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
 
-            {/* Location Section */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  <CardTitle>Location & Address</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="province">Province/Region</Label>
-                  <Select name="province" defaultValue={householdData.province} required>
-                    <SelectTrigger id="province" data-testid="select-province">
-                      <SelectValue placeholder="Select Province" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Central Province">Central Province</SelectItem>
-                      <SelectItem value="Eastern Province">Eastern Province</SelectItem>
-                      <SelectItem value="Western Province">Western Province</SelectItem>
-                      <SelectItem value="Northern Province">Northern Province</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="district">District</Label>
-                  <Select name="district" defaultValue={householdData.district} required>
-                    <SelectTrigger id="district" data-testid="select-district">
-                      <SelectValue placeholder="Select District" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Capital District">Capital District</SelectItem>
-                      <SelectItem value="River District">River District</SelectItem>
-                      <SelectItem value="Mountain District">Mountain District</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="village">Village / Community</Label>
-                  <Input id="village" name="village" defaultValue={householdData.village} placeholder="Enter village name" required data-testid="input-village" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="gps">GPS Coordinates (Optional)</Label>
-                  <Input id="gps" name="gps" defaultValue={householdData.gpsCoordinates || ''} placeholder="Lat, Long" data-testid="input-gps" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Home Visit Information */}
-            {householdData.homeVisitStatus === 'completed' && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Home className="h-5 w-5 text-primary" />
-                      <CardTitle>Home Visit Information</CardTitle>
-                    </div>
-                    <Button type="button" onClick={addMember} variant="outline" size="sm" className="gap-2" data-testid="button-add-member">
-                      <Plus className="h-4 w-4" /> Add Member
-                    </Button>
-                  </div>
-                  <CardDescription>Data collected during the home visit. Edit household details and member education, employment & income.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Household Details */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="roofType">Roof Type</Label>
-                      <Select value={roofType} onValueChange={setRoofType}>
-                        <SelectTrigger id="roofType" data-testid="select-roof-type">
-                          <SelectValue placeholder="Select roof type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ROOF_TYPE_OPTIONS.map(option => (
-                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="wallType">Wall Type</Label>
-                      <Select value={wallType} onValueChange={setWallType}>
-                        <SelectTrigger id="wallType" data-testid="select-wall-type">
-                          <SelectValue placeholder="Select wall type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {WALL_TYPE_OPTIONS.map(option => (
-                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-3 md:col-span-2">
-                      <Label>Household Assets</Label>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {HOUSEHOLD_ASSETS_OPTIONS.map(option => (
-                          <div key={option.value} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`asset-${option.value}`}
-                              checked={householdAssetsList.includes(option.value)}
-                              onCheckedChange={(checked) => {
-                                setHouseholdAssetsList(prev =>
-                                  checked
-                                    ? [...prev, option.value]
-                                    : prev.filter(v => v !== option.value)
-                                );
-                              }}
-                              data-testid={`checkbox-asset-${option.value}`}
-                            />
-                            <Label
-                              htmlFor={`asset-${option.value}`}
-                              className="text-sm font-normal cursor-pointer"
-                            >
-                              {option.label}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="homeVisitNotes">Home Visit Notes</Label>
-                      <Textarea
-                        id="homeVisitNotes"
-                        value={homeVisitNotes}
-                        onChange={(e) => setHomeVisitNotes(e.target.value)}
-                        placeholder="Notes from the home visit..."
-                        rows={3}
-                        data-testid="textarea-home-visit-notes"
-                      />
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Per-Member Education, Employment & Income */}
-                  {members.map((member, index) => (
-                    <div key={member.id || `hv-${index}`}>
-                      {index > 0 && <Separator className="my-4" />}
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-medium text-sm uppercase tracking-wide text-muted-foreground">
-                          {member.firstName} {member.lastName}
-                          {index === 0 ? ' (Head of Household)' : ''}
-                        </h3>
-                        {index > 0 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeMember(index)}
-                            className="text-destructive hover:bg-destructive/10"
-                            data-testid={`button-remove-member-${index}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-
-                      {/* Education */}
-                      <p className="text-xs font-semibold text-muted-foreground mt-2 mb-2">Education</p>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label>Education Level</Label>
-                          <Select
-                            value={member.educationLevel}
-                            onValueChange={(value) => {
-                              const newMembers = [...members];
-                              newMembers[index].educationLevel = value;
-                              setMembers(newMembers);
-                            }}
-                          >
-                            <SelectTrigger data-testid={`select-education-${index}`}>
-                              <SelectValue placeholder="Select" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">No Formal Education</SelectItem>
-                              <SelectItem value="primary">Primary School</SelectItem>
-                              <SelectItem value="secondary">Secondary School</SelectItem>
-                              <SelectItem value="vocational">Vocational Training</SelectItem>
-                              <SelectItem value="tertiary">Tertiary/University</SelectItem>
-                              <SelectItem value="postgraduate">Postgraduate</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Current Enrolment</Label>
-                          <Input
-                            value={member.currentEducationEnrolment}
-                            onChange={(e) => {
-                              const newMembers = [...members];
-                              newMembers[index].currentEducationEnrolment = e.target.value;
-                              setMembers(newMembers);
-                            }}
-                            placeholder="Current education enrolment"
-                            data-testid={`input-enrolment-${index}`}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Professional Certifications</Label>
-                          <Input
-                            value={member.professionalCertifications}
-                            onChange={(e) => {
-                              const newMembers = [...members];
-                              newMembers[index].professionalCertifications = e.target.value;
-                              setMembers(newMembers);
-                            }}
-                            placeholder="Certifications"
-                            data-testid={`input-certifications-${index}`}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Ongoing Certification</Label>
-                          <Input
-                            value={member.ongoingCertification}
-                            onChange={(e) => {
-                              const newMembers = [...members];
-                              newMembers[index].ongoingCertification = e.target.value;
-                              setMembers(newMembers);
-                            }}
-                            placeholder="Ongoing certification"
-                            data-testid={`input-ongoing-cert-${index}`}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Employment & Income */}
-                      <p className="text-xs font-semibold text-muted-foreground mt-6 mb-2">Employment & Income</p>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label>Professional Situation</Label>
-                          <Select
-                            value={member.professionalSituation}
-                            onValueChange={(value) => {
-                              const newMembers = [...members];
-                              newMembers[index].professionalSituation = value;
-                              setMembers(newMembers);
-                            }}
-                          >
-                            <SelectTrigger data-testid={`select-profession-${index}`}>
-                              <SelectValue placeholder="Select" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="employed_full">Employed Full-time</SelectItem>
-                              <SelectItem value="employed_part">Employed Part-time</SelectItem>
-                              <SelectItem value="self_employed">Self-employed</SelectItem>
-                              <SelectItem value="unemployed">Unemployed</SelectItem>
-                              <SelectItem value="student">Student</SelectItem>
-                              <SelectItem value="retired">Retired</SelectItem>
-                              <SelectItem value="homemaker">Homemaker</SelectItem>
-                              <SelectItem value="unable_to_work">Unable to Work</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2 md:col-span-2">
-                          <Label>Employer Details</Label>
-                          <Input
-                            value={member.employerDetails}
-                            onChange={(e) => {
-                              const newMembers = [...members];
-                              newMembers[index].employerDetails = e.target.value;
-                              setMembers(newMembers);
-                            }}
-                            placeholder="Employer name / details"
-                            data-testid={`input-employer-${index}`}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Income Entries */}
-                      <div className="mt-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <Label className="text-xs font-semibold text-muted-foreground">Income Sources</Label>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs gap-1"
-                            onClick={() => {
-                              const newMembers = [...members];
-                              newMembers[index].incomeType = [...newMembers[index].incomeType, { type: '', monthlyAmount: '' }];
-                              setMembers(newMembers);
-                            }}
-                          >
-                            <Plus className="h-3 w-3" /> Add Income
-                          </Button>
-                        </div>
-                        {member.incomeType.length === 0 && (
-                          <p className="text-sm text-muted-foreground italic">No income sources recorded.</p>
-                        )}
-                        {member.incomeType.map((income, incIdx) => (
-                          <div key={incIdx} className="flex items-end gap-2 mb-2">
-                            <div className="flex-1 space-y-1">
-                              <Label className="text-xs">Type</Label>
-                              <Select
-                                value={income.type}
-                                onValueChange={(value) => {
-                                  const newMembers = [...members];
-                                  newMembers[index].incomeType[incIdx].type = value;
-                                  setMembers(newMembers);
-                                }}
-                              >
-                                <SelectTrigger className="h-9">
-                                  <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {INCOME_TYPE_OPTIONS.map(opt => (
-                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="w-32 space-y-1">
-                              <Label className="text-xs">Monthly ($)</Label>
-                              <Input
-                                className="h-9"
-                                type="number"
-                                value={income.monthlyAmount}
-                                onChange={(e) => {
-                                  const newMembers = [...members];
-                                  newMembers[index].incomeType[incIdx].monthlyAmount = e.target.value;
-                                  setMembers(newMembers);
-                                }}
-                                placeholder="0.00"
-                              />
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-9 text-destructive hover:bg-destructive/10"
-                              onClick={() => {
+                    {/* Education (only after home visit) */}
+                    {householdData.homeVisitStatus === 'completed' && (
+                      <>
+                        <p className="text-xs font-semibold text-muted-foreground mt-6 mb-2">Education</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label>Education Level</Label>
+                            <Select
+                              value={member.educationLevel}
+                              onValueChange={(value) => {
                                 const newMembers = [...members];
-                                newMembers[index].incomeType.splice(incIdx, 1);
+                                newMembers[index].educationLevel = value;
                                 setMembers(newMembers);
                               }}
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <SelectTrigger data-testid={`select-education-${index}`}>
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">No Formal Education</SelectItem>
+                                <SelectItem value="primary">Primary School</SelectItem>
+                                <SelectItem value="secondary">Secondary School</SelectItem>
+                                <SelectItem value="vocational">Vocational Training</SelectItem>
+                                <SelectItem value="tertiary">Tertiary/University</SelectItem>
+                                <SelectItem value="postgraduate">Postgraduate</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Current Enrolment</Label>
+                            <Input
+                              value={member.currentEducationEnrolment}
+                              onChange={(e) => {
+                                const newMembers = [...members];
+                                newMembers[index].currentEducationEnrolment = e.target.value;
+                                setMembers(newMembers);
+                              }}
+                              placeholder="Current education enrolment"
+                              data-testid={`input-enrolment-${index}`}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Professional Certifications</Label>
+                            <Input
+                              value={member.professionalCertifications}
+                              onChange={(e) => {
+                                const newMembers = [...members];
+                                newMembers[index].professionalCertifications = e.target.value;
+                                setMembers(newMembers);
+                              }}
+                              placeholder="Certifications"
+                              data-testid={`input-certifications-${index}`}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Ongoing Certification</Label>
+                            <Input
+                              value={member.ongoingCertification}
+                              onChange={(e) => {
+                                const newMembers = [...members];
+                                newMembers[index].ongoingCertification = e.target.value;
+                                setMembers(newMembers);
+                              }}
+                              placeholder="Ongoing certification"
+                              data-testid={`input-ongoing-cert-${index}`}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Employment & Income (only after home visit) */}
+                    {householdData.homeVisitStatus === 'completed' && (
+                      <>
+                        <p className="text-xs font-semibold text-muted-foreground mt-6 mb-2">Employment & Income</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label>Professional Situation</Label>
+                            <Select
+                              value={member.professionalSituation}
+                              onValueChange={(value) => {
+                                const newMembers = [...members];
+                                newMembers[index].professionalSituation = value;
+                                setMembers(newMembers);
+                              }}
+                            >
+                              <SelectTrigger data-testid={`select-profession-${index}`}>
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="employed_full">Employed Full-time</SelectItem>
+                                <SelectItem value="employed_part">Employed Part-time</SelectItem>
+                                <SelectItem value="self_employed">Self-employed</SelectItem>
+                                <SelectItem value="unemployed">Unemployed</SelectItem>
+                                <SelectItem value="student">Student</SelectItem>
+                                <SelectItem value="retired">Retired</SelectItem>
+                                <SelectItem value="homemaker">Homemaker</SelectItem>
+                                <SelectItem value="unable_to_work">Unable to Work</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <Label>Employer Details</Label>
+                            <Input
+                              value={member.employerDetails}
+                              onChange={(e) => {
+                                const newMembers = [...members];
+                                newMembers[index].employerDetails = e.target.value;
+                                setMembers(newMembers);
+                              }}
+                              placeholder="Employer name / details"
+                              data-testid={`input-employer-${index}`}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Income Entries */}
+                        <div className="mt-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <Label className="text-xs font-semibold text-muted-foreground">Income Sources</Label>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1"
+                              onClick={() => {
+                                const newMembers = [...members];
+                                newMembers[index].incomeType = [...newMembers[index].incomeType, { type: '', monthlyAmount: '' }];
+                                setMembers(newMembers);
+                              }}
+                            >
+                              <Plus className="h-3 w-3" /> Add Income
                             </Button>
                           </div>
-                        ))}
-                      </div>
+                          {member.incomeType.length === 0 && (
+                            <p className="text-sm text-muted-foreground italic">No income sources recorded.</p>
+                          )}
+                          {member.incomeType.map((income, incIdx) => (
+                            <div key={incIdx} className="flex items-end gap-2 mb-2">
+                              <div className="flex-1 space-y-1">
+                                <Label className="text-xs">Type</Label>
+                                <Select
+                                  value={income.type}
+                                  onValueChange={(value) => {
+                                    const newMembers = [...members];
+                                    newMembers[index].incomeType[incIdx].type = value;
+                                    setMembers(newMembers);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-9">
+                                    <SelectValue placeholder="Select type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {INCOME_TYPE_OPTIONS.map(opt => (
+                                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="w-32 space-y-1">
+                                <Label className="text-xs">Monthly ($)</Label>
+                                <Input
+                                  className="h-9"
+                                  type="number"
+                                  value={income.monthlyAmount}
+                                  onChange={(e) => {
+                                    const newMembers = [...members];
+                                    newMembers[index].incomeType[incIdx].monthlyAmount = e.target.value;
+                                    setMembers(newMembers);
+                                  }}
+                                  placeholder="0.00"
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 text-destructive hover:bg-destructive/10"
+                                onClick={() => {
+                                  const newMembers = [...members];
+                                  newMembers[index].incomeType.splice(incIdx, 1);
+                                  setMembers(newMembers);
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
 
-                      {/* Narrative Summary */}
+                    {/* Narrative Summary (only after home visit) */}
+                    {householdData.homeVisitStatus === 'completed' && (
                       <div className="mt-4 space-y-2">
                         <Label>Notes / Narrative Summary</Label>
                         <Textarea
@@ -1066,10 +1378,12 @@ export function ApplicationEdit() {
                           data-testid={`textarea-narrative-${index}`}
                         />
                       </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+                    )}
+                  </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
             )}
 
             {/* Action Buttons */}

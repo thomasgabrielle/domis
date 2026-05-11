@@ -15,9 +15,11 @@ import {
 } from "../shared/schema";
 
 // Create pool using the same driver as the server
-const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL!,
-  ssl: { rejectUnauthorized: false } // Allow mismatched certificates
+const dbUrl = process.env.DATABASE_URL!;
+const isLocalhost = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1');
+const pool = new Pool({
+  connectionString: dbUrl,
+  ...(isLocalhost ? {} : { ssl: { rejectUnauthorized: false } }),
 });
 
 const db = drizzle(pool);
@@ -392,7 +394,7 @@ async function seedData() {
       const head = srcMembers[0];
       const srcH = srcHouseholdRows[0];
       householdCount++;
-      const dupCode = `HH-${year}-${String(householdCount).padStart(3, '0')}-${seedTimestamp.toString().slice(-4)}`;
+      const dupCode = `HH-2024-${String(householdCount).padStart(3, '0')}-${seedTimestamp.toString().slice(-4)}`;
 
       const [dupHousehold] = await db.insert(households).values({
         householdCode: dupCode,

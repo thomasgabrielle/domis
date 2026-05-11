@@ -13,6 +13,21 @@ import { useLocation } from "wouter";
 import { useState, useCallback } from "react";
 import { MapPin, Upload, Calendar, UserCheck, User, Users, AlertCircle, XCircle, Search, CheckCircle2, Loader2, X } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth";
+
+const PROVINCE_DISTRICTS: Record<string, string[]> = {
+  "Central Province": ["Capital District", "River District", "Highland District"],
+  "Eastern Province": ["Coastal District", "Valley District", "Lake District"],
+  "Western Province": ["Mountain District", "Plains District", "Forest District"],
+  "Northern Province": ["Border District", "Savanna District", "Desert District"],
+};
+
+function getProvinceForDistrict(district: string): string {
+  for (const [province, districts] of Object.entries(PROVINCE_DISTRICTS)) {
+    if (districts.includes(district)) return province;
+  }
+  return "";
+}
 
 type LocationForm = {
   province: string;
@@ -35,6 +50,9 @@ export function Registration() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isVccClerk = user?.role?.name === 'vcc_clerk';
+  const userDistrict = user?.district || null;
   const [hasProxy, setHasProxy] = useState(false);
 
   // Last name lookup state
@@ -157,8 +175,8 @@ export function Registration() {
   }, []);
 
   const [locationData, setLocationData] = useState<LocationForm>({
-    province: "",
-    district: "",
+    province: isVccClerk && userDistrict ? getProvinceForDistrict(userDistrict) : "",
+    district: isVccClerk && userDistrict ? userDistrict : "",
     village: "",
     gpsCoordinates: "",
   });
@@ -676,18 +694,26 @@ export function Registration() {
                       name="province"
                       required
                       value={locationData.province}
-                      onValueChange={(value) => setLocationData(prev => ({ ...prev, province: value }))}
+                      onValueChange={(value) => {
+                        setLocationData(prev => {
+                          const newDistrict = PROVINCE_DISTRICTS[value]?.includes(prev.district) ? prev.district : "";
+                          return { ...prev, province: value, district: newDistrict };
+                        });
+                      }}
+                      disabled={isVccClerk && !!userDistrict}
                     >
                       <SelectTrigger id="province" data-testid="select-province">
                         <SelectValue placeholder="Select Province" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Central Province">Central Province</SelectItem>
-                        <SelectItem value="Eastern Province">Eastern Province</SelectItem>
-                        <SelectItem value="Western Province">Western Province</SelectItem>
-                        <SelectItem value="Northern Province">Northern Province</SelectItem>
+                        {Object.keys(PROVINCE_DISTRICTS).map(p => (
+                          <SelectItem key={p} value={p}>{p}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                    {isVccClerk && userDistrict && (
+                      <p className="text-xs text-muted-foreground">Province is set based on your assigned district.</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="district">District</Label>
@@ -696,23 +722,20 @@ export function Registration() {
                       required
                       value={locationData.district}
                       onValueChange={(value) => setLocationData(prev => ({ ...prev, district: value }))}
+                      disabled={isVccClerk && !!userDistrict}
                     >
                       <SelectTrigger id="district" data-testid="select-district">
-                        <SelectValue placeholder="Select District" />
+                        <SelectValue placeholder={locationData.province ? "Select District" : "Select Province first"} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Capital District">Capital District</SelectItem>
-                        <SelectItem value="River District">River District</SelectItem>
-                        <SelectItem value="Mountain District">Mountain District</SelectItem>
-                        <SelectItem value="Lake District">Lake District</SelectItem>
-                        <SelectItem value="Coastal District">Coastal District</SelectItem>
-                        <SelectItem value="Highland District">Highland District</SelectItem>
-                        <SelectItem value="Valley District">Valley District</SelectItem>
-                        <SelectItem value="Border District">Border District</SelectItem>
-                        <SelectItem value="Desert District">Desert District</SelectItem>
-                        <SelectItem value="Plains District">Plains District</SelectItem>
+                        {(PROVINCE_DISTRICTS[locationData.province] || []).map(d => (
+                          <SelectItem key={d} value={d}>{d}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                    {isVccClerk && userDistrict && (
+                      <p className="text-xs text-muted-foreground">District is set to your assigned district.</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="village">Village / Community</Label>

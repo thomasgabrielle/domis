@@ -17,6 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Plus, Trash2, Home, User, FileText, ArrowLeft, Save, Loader2, ChevronsUpDown, X, Info } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { useAuth } from "@/lib/auth";
 
 type IncomeEntry = {
   type: string;
@@ -148,6 +149,8 @@ export function HomeVisitDetail() {
   const [, setLocation] = useLocation();
   const params = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const { hasAnyPermission } = useAuth();
+  const canEditVisit = hasAnyPermission("application.edit");
   
   const [householdDetails, setHouseholdDetails] = useState({
     roofType: "",
@@ -405,7 +408,7 @@ export function HomeVisitDetail() {
           </div>
         </div>
 
-        <div className="space-y-6">
+        <fieldset disabled={!canEditVisit} className="space-y-6">
           {/* Prior data carried forward banner */}
           {priorSource && (
             <Alert className="border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
@@ -924,40 +927,44 @@ export function HomeVisitDetail() {
 
           <Card>
             <CardFooter className="bg-muted/50 flex justify-end gap-4 p-6">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => setLocation("/worksheet")}
                 disabled={saveHomeVisitMutation.isPending}
                 data-testid="button-cancel"
               >
-                Cancel
+                {canEditVisit ? 'Cancel' : 'Back'}
               </Button>
-              <Button 
-                type="button"
-                variant="secondary"
-                onClick={() => handleSave(false)}
-                disabled={saveHomeVisitMutation.isPending}
-                data-testid="button-save-progress"
-              >
-                {saveHomeVisitMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                Save Progress
-              </Button>
-              <Button 
-                type="button"
-                onClick={() => handleSave(true)}
-                disabled={saveHomeVisitMutation.isPending}
-                data-testid="button-complete"
-              >
-                {saveHomeVisitMutation.isPending ? "Saving..." : "Complete Home Visit"}
-              </Button>
+              {canEditVisit && (
+                <>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => handleSave(false)}
+                    disabled={saveHomeVisitMutation.isPending}
+                    data-testid="button-save-progress"
+                  >
+                    {saveHomeVisitMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-2" />
+                    )}
+                    Save Progress
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => handleSave(true)}
+                    disabled={saveHomeVisitMutation.isPending}
+                    data-testid="button-complete"
+                  >
+                    {saveHomeVisitMutation.isPending ? "Saving..." : "Complete Home Visit"}
+                  </Button>
+                </>
+              )}
             </CardFooter>
           </Card>
-        </div>
+        </fieldset>
       </main>
     </div>
   );

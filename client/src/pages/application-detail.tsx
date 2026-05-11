@@ -3,15 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, User, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Pencil, AlertCircle, FileText, Home } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Users, ChevronLeft, ChevronRight, Pencil, AlertCircle, FileText, Home } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
+import { useAuth } from "@/lib/auth";
 
 export function ApplicationDetail() {
   const [, setLocation] = useLocation();
   const params = useParams<{ id: string }>();
   const householdId = params.id;
+  const { hasAnyPermission } = useAuth();
+  const canEdit = hasAnyPermission("application.edit");
 
   const { data: allHouseholds = [] } = useQuery({
     queryKey: ['households'],
@@ -203,15 +206,17 @@ export function ApplicationDetail() {
                 Application Details
               </h1>
               {getStatusBadge(household.programStatus)}
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 cursor-pointer"
-                onClick={() => setLocation(`/application/${householdId}/edit`)}
-                data-testid="button-edit"
-              >
-                <Pencil className="h-4 w-4" /> Edit
-              </Button>
+              {canEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 cursor-pointer"
+                  onClick={() => setLocation(`/application/${householdId}/edit`)}
+                  data-testid="button-edit"
+                >
+                  <Pencil className="h-4 w-4" /> Edit
+                </Button>
+              )}
             </div>
             <p className="text-muted-foreground">
               Application ID: <span className="font-mono">{household.applicationId || household.householdCode}</span>
@@ -249,61 +254,6 @@ export function ApplicationDetail() {
             </div>
           )}
         </div>
-
-        {/* Primary Applicant Highlight */}
-        {(() => {
-          const headOfHousehold = members?.find((m: any) => m.relationshipToHead === 'head' || m.isHead);
-          if (!headOfHousehold) return null;
-          const age = headOfHousehold.dateOfBirth
-            ? Math.floor((new Date().getTime() - new Date(headOfHousehold.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-            : null;
-          return (
-            <Card className="border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10" data-testid="card-primary-applicant">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center text-2xl font-bold text-primary shrink-0">
-                    {headOfHousehold.firstName?.charAt(0)}{headOfHousehold.lastName?.charAt(0)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge className="bg-primary text-primary-foreground">Primary Applicant</Badge>
-                      {headOfHousehold.disabilityStatus && (
-                        <Badge variant="outline" className="border-amber-500 text-amber-600">Has Disability</Badge>
-                      )}
-                    </div>
-                    <h2 className="text-2xl font-bold text-foreground" data-testid="text-applicant-name">
-                      {headOfHousehold.firstName} {headOfHousehold.lastName}
-                    </h2>
-                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <span className="font-medium">Age:</span> {age || '—'}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="font-medium">Sex:</span> <span className="capitalize">{headOfHousehold.gender}</span>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="font-medium">National ID:</span>
-                        <span className="font-mono">{headOfHousehold.nationalId || '—'}</span>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="font-medium">Marital Status:</span>
-                        <span className="capitalize">{headOfHousehold.maritalStatus || '—'}</span>
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-4 mt-1 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <span className="font-medium">Location:</span> {household.village}, {household.district}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="font-medium">Household Size:</span> {members?.length || 0} member(s)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })()}
 
         {/* Related Applications */}
         {relatedApplications.length > 0 && (() => {
@@ -383,6 +333,139 @@ export function ApplicationDetail() {
                 </Card>
               )}
             </>
+          );
+        })()}
+
+        {/* Primary Applicant Highlight */}
+        {(() => {
+          const headOfHousehold = members?.find((m: any) => m.relationshipToHead === 'head' || m.isHead);
+          if (!headOfHousehold) return null;
+          const age = headOfHousehold.dateOfBirth
+            ? Math.floor((new Date().getTime() - new Date(headOfHousehold.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+            : null;
+          return (
+            <Card data-testid="card-primary-applicant">
+              <CardContent className="pt-6 space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center text-2xl font-bold text-primary shrink-0">
+                    {headOfHousehold.firstName?.charAt(0)}{headOfHousehold.lastName?.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge className="bg-primary text-primary-foreground">Primary Applicant</Badge>
+                      {headOfHousehold.disabilityStatus && (
+                        <Badge variant="outline" className="border-amber-500 text-amber-600">Has Disability</Badge>
+                      )}
+                    </div>
+                    <h2 className="text-2xl font-bold text-foreground" data-testid="text-applicant-name">
+                      {headOfHousehold.firstName} {headOfHousehold.lastName}
+                    </h2>
+                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">Age:</span> {age || '—'}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">Sex:</span> <span className="capitalize">{headOfHousehold.gender}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">National ID:</span>
+                        <span className="font-mono">{headOfHousehold.nationalId || '—'}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">Marital Status:</span>
+                        <span className="capitalize">{headOfHousehold.maritalStatus || '—'}</span>
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-4 mt-1 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">Location:</span> {household.village}, {household.district}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium">Household Size:</span> {members?.length || 0} member(s)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Education (only after home visit) */}
+                {household.homeVisitStatus === 'completed' && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground mb-2">Education</p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Education Level</p>
+                          <p className="font-medium capitalize">{headOfHousehold.educationLevel?.replace(/_/g, ' ') || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Current Enrollment</p>
+                          <p className="font-medium capitalize">{headOfHousehold.currentEducationEnrolment?.replace(/_/g, ' ') || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Professional Certifications</p>
+                          <p className="font-medium">{headOfHousehold.professionalCertifications?.replace(/_/g, ' ') || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Ongoing Certification</p>
+                          <p className="font-medium">{headOfHousehold.ongoingCertification || '—'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground mb-2">Employment & Income</p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Professional Situation</p>
+                          <p className="font-medium capitalize">{headOfHousehold.professionalSituation?.replace(/_/g, ' ') || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Employer Details</p>
+                          <p className="font-medium">{headOfHousehold.employerDetails || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Income Sources</p>
+                          <p className="font-medium">
+                            {headOfHousehold.incomeType
+                              ? (() => {
+                                  try {
+                                    const incomes = JSON.parse(headOfHousehold.incomeType);
+                                    if (Array.isArray(incomes) && incomes.length > 0) {
+                                      return incomes.map((inc: any) =>
+                                        `${inc.type?.replace(/_/g, ' ')} ($${inc.monthlyAmount || 0})`
+                                      ).join(', ');
+                                    }
+                                    return headOfHousehold.incomeType.replace(/_/g, ' ');
+                                  } catch {
+                                    return headOfHousehold.incomeType.replace(/_/g, ' ');
+                                  }
+                                })()
+                              : '—'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Monthly Income</p>
+                          <p className="font-medium">
+                            {(() => {
+                              try {
+                                const incomes = JSON.parse(headOfHousehold.incomeType || '[]');
+                                if (Array.isArray(incomes) && incomes.length > 0) {
+                                  const total = incomes.reduce((sum: number, inc: any) => sum + (parseFloat(inc.monthlyAmount) || 0), 0);
+                                  return `$${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                                }
+                              } catch {}
+                              return '—';
+                            })()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           );
         })()}
 
@@ -498,28 +581,113 @@ export function ApplicationDetail() {
           </CardContent>
         </Card>
 
-        {/* Applicant Information */}
+        {/* Location Information */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              <CardTitle>Location & Address</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Province/Region</p>
+              <p className="font-medium">{household.province}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">District</p>
+              <p className="font-medium">{household.district}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Village/Community</p>
+              <p className="font-medium">{household.village}</p>
+            </div>
+            {household.gpsCoordinates && (
+              <div>
+                <p className="text-sm text-muted-foreground">GPS Coordinates</p>
+                <p className="font-medium font-mono">{household.gpsCoordinates}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Household Details */}
+        {household.homeVisitStatus === 'completed' && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Home className="h-5 w-5 text-primary" />
+                <CardTitle>Household Details</CardTitle>
+              </div>
+              <CardDescription>
+                Housing characteristics and assets collected during the home visit{household.homeVisitDate ? ` on ${formatDate(household.homeVisitDate)}` : ''}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Roof Type</p>
+                  <p className="font-medium capitalize">{household.roofType || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Wall Type</p>
+                  <p className="font-medium capitalize">{household.wallType || '—'}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-sm text-muted-foreground">Household Assets</p>
+                  <p className="font-medium">
+                    {household.householdAssetsList
+                      ? (() => {
+                          try {
+                            const assets = JSON.parse(household.householdAssetsList);
+                            return assets.map((a: string) => a.replace(/_/g, ' ')).map((a: string) =>
+                              a.charAt(0).toUpperCase() + a.slice(1)
+                            ).join(', ');
+                          } catch {
+                            return household.householdAssetsList;
+                          }
+                        })()
+                      : '—'}
+                  </p>
+                </div>
+              </div>
+
+              {household.homeVisitNotes && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">Home Visit Notes</p>
+                  <p className="text-sm whitespace-pre-wrap">{household.homeVisitNotes}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Other Household Members */}
+        {members?.filter((m: any) => m.relationshipToHead !== 'head' && !m.isHead).length > 0 && (
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
-              <CardTitle>Applicant Information</CardTitle>
+              <CardTitle>Other Household Members</CardTitle>
             </div>
             <CardDescription>
-              {members?.length || 0} member(s) in this application
+              {(() => {
+                const otherCount = members?.filter((m: any) => m.relationshipToHead !== 'head' && !m.isHead).length || 0;
+                return household.homeVisitStatus === 'completed'
+                  ? `${otherCount} other member(s) — personal details, education, employment and income`
+                  : `${otherCount} other member(s) in this application`;
+              })()}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {members?.map((member: any, index: number) => (
+            {members?.filter((m: any) => m.relationshipToHead !== 'head' && !m.isHead).map((member: any, index: number) => (
               <div key={member.id}>
                 {index > 0 && <Separator className="my-6" />}
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-medium text-sm uppercase tracking-wide text-muted-foreground">
-                    {member.relationshipToHead === 'head' ? 'Head of Household' : `Member #${index + 1}`}
-                  </h3>
-                </div>
+                <h3 className="font-medium text-sm uppercase tracking-wide text-muted-foreground mb-4">
+                  Member #{index + 1}
+                </h3>
 
-                {/* Basic Information */}
+                {/* Personal Details */}
                 <div className="mb-4">
                   <p className="text-xs font-semibold text-muted-foreground mb-2">Personal Details</p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -553,105 +721,9 @@ export function ApplicationDetail() {
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
 
-        {/* Location Information */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-primary" />
-              <CardTitle>Location & Address</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Province/Region</p>
-              <p className="font-medium">{household.province}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">District</p>
-              <p className="font-medium">{household.district}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Village/Community</p>
-              <p className="font-medium">{household.village}</p>
-            </div>
-            {household.gpsCoordinates && (
-              <div>
-                <p className="text-sm text-muted-foreground">GPS Coordinates</p>
-                <p className="font-medium font-mono">{household.gpsCoordinates}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Home Visit Information */}
-        {household.homeVisitStatus === 'completed' && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Home className="h-5 w-5 text-primary" />
-                <CardTitle>Home Visit Information</CardTitle>
-              </div>
-              <CardDescription>
-                Data collected during the home visit{household.homeVisitDate ? ` on ${formatDate(household.homeVisitDate)}` : ''}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Household Details */}
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-2">Household Details</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Roof Type</p>
-                    <p className="font-medium capitalize">{household.roofType || '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Wall Type</p>
-                    <p className="font-medium capitalize">{household.wallType || '—'}</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <p className="text-sm text-muted-foreground">Household Assets</p>
-                    <p className="font-medium">
-                      {household.householdAssetsList
-                        ? (() => {
-                            try {
-                              const assets = JSON.parse(household.householdAssetsList);
-                              return assets.map((a: string) => a.replace(/_/g, ' ')).map((a: string) =>
-                                a.charAt(0).toUpperCase() + a.slice(1)
-                              ).join(', ');
-                            } catch {
-                              return household.householdAssetsList;
-                            }
-                          })()
-                        : '—'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {household.homeVisitNotes && (
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground mb-2">Home Visit Notes</p>
-                  <p className="text-sm whitespace-pre-wrap">{household.homeVisitNotes}</p>
-                </div>
-              )}
-
-              <Separator />
-
-              {/* Member Education, Employment & Income */}
-              {members?.map((member: any, index: number) => (
-                <div key={member.id}>
-                  {index > 0 && <Separator className="my-4" />}
-                  <h3 className="font-medium text-sm uppercase tracking-wide text-muted-foreground mb-4">
-                    {member.firstName} {member.lastName}
-                    {member.relationshipToHead === 'head' ? ' (Head of Household)' : ''}
-                  </h3>
-
-                  {/* Education */}
+                {/* Education (only after home visit) */}
+                {household.homeVisitStatus === 'completed' && (
                   <div className="mb-4">
                     <p className="text-xs font-semibold text-muted-foreground mb-2">Education</p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -673,8 +745,10 @@ export function ApplicationDetail() {
                       </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Employment & Income */}
+                {/* Employment & Income (only after home visit) */}
+                {household.homeVisitStatus === 'completed' && (
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground mb-2">Employment & Income</p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -687,7 +761,7 @@ export function ApplicationDetail() {
                         <p className="font-medium">{member.employerDetails || '—'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Income Type</p>
+                        <p className="text-sm text-muted-foreground">Income Sources</p>
                         <p className="font-medium">
                           {member.incomeType
                             ? (() => {
@@ -709,15 +783,25 @@ export function ApplicationDetail() {
                       <div>
                         <p className="text-sm text-muted-foreground">Monthly Income</p>
                         <p className="font-medium">
-                          {member.monthlyIncome ? `$${parseFloat(member.monthlyIncome).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—'}
+                          {(() => {
+                            try {
+                              const incomes = JSON.parse(member.incomeType || '[]');
+                              if (Array.isArray(incomes) && incomes.length > 0) {
+                                const total = incomes.reduce((sum: number, inc: any) => sum + (parseFloat(inc.monthlyAmount) || 0), 0);
+                                return `$${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                              }
+                            } catch {}
+                            return '—';
+                          })()}
                         </p>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
         )}
 
         {/* Action Buttons */}

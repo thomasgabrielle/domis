@@ -1,8 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { 
-  insertHouseholdSchema, 
+import { requireAuth, requirePermission } from "./auth";
+import {
+  insertHouseholdSchema,
   insertHouseholdMemberSchema,
   insertAssessmentSchema,
   insertGrievanceSchema,
@@ -14,34 +15,48 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+/**
+ * Returns the district to scope queries to, or null if no scoping is needed.
+ * Only VCC Clerk users get district-scoped data access.
+ */
+function getUserDistrictScope(user: Express.User): string | null {
+  if (user.role?.name === 'vcc_clerk' && user.district) {
+    return user.district;
+  }
+  return null;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  
+
   // ===== HOUSEHOLDS =====
-  
-  // Create household with members
-  app.post("/api/households", async (req, res) => {
+
+  // Create household with members (intake)
+  app.post("/api/households", requireAuth, requirePermission("intake.create"), async (req, res) => {
     const MAX_RETRIES = 3;
-    
+
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
         const householdData = insertHouseholdSchema.parse(req.body.household);
         const membersData = z.array(insertHouseholdMemberSchema).parse(req.body.members || []);
-        
-        // Generate household code (HH-YYYY-XXX format) and application ID (APP-YYYY-XXX format)
-        // Use MAX-based approach to handle deletions and ensure uniqueness
+
+        // Force district to VCC Clerk's assigned district
+        const districtScope = getUserDistrictScope(req.user!);
+        if (districtScope) {
+          (householdData as any).district = districtScope;
+        }
+
         const year = new Date().getFullYear();
         const allHouseholds = await storage.getAllHouseholds();
-        
-        // Extract the highest number from existing codes for the current year
+
         const yearPattern = new RegExp(`^HH-${year}-(\\d+)$`);
         const appPattern = new RegExp(`^APP-${year}-(\\d+)$`);
-        
+
         let maxHHNum = 0;
         let maxAppNum = 0;
-        
+
         for (const h of allHouseholds) {
           const hhMatch = h.householdCode?.match(yearPattern);
           if (hhMatch) {
@@ -52,38 +67,40 @@ export async function registerRoutes(
             maxAppNum = Math.max(maxAppNum, parseInt(appMatch[1], 10));
           }
         }
-        
-        // Add attempt offset to handle concurrent creation collisions
+
         const nextNum = Math.max(maxHHNum, maxAppNum) + 1 + attempt;
         const householdCode = `HH-${year}-${String(nextNum).padStart(3, '0')}`;
         const applicationId = `APP-${year}-${String(nextNum).padStart(3, '0')}`;
-        
+
         const household = await storage.createHousehold(
           { ...householdData, householdCode, applicationId } as any,
           membersData
         );
-        
+
         const fullHousehold = await storage.getHouseholdWithMembers(household.id);
         return res.json(fullHousehold);
       } catch (error: any) {
-        // Check if this is a unique constraint violation (retry)
-        const isUniqueViolation = error.message?.includes('unique') || 
+        const isUniqueViolation = error.message?.includes('unique') ||
                                    error.message?.includes('duplicate') ||
                                    error.code === '23505';
-        
+
         if (isUniqueViolation && attempt < MAX_RETRIES - 1) {
-          continue; // Retry with incremented attempt offset
+          continue;
         }
-        
+
         return res.status(400).json({ error: error.message });
       }
     }
   });
 
   // Get all households
-  app.get("/api/households", async (req, res) => {
+  app.get("/api/households", requireAuth, requirePermission("intake.view", "application.view"), async (req, res) => {
     try {
-      const households = await storage.getAllHouseholds();
+      let households = await storage.getAllHouseholds();
+      const districtScope = getUserDistrictScope(req.user!);
+      if (districtScope) {
+        households = households.filter(h => h.district === districtScope);
+      }
       res.json(households);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -91,9 +108,13 @@ export async function registerRoutes(
   });
 
   // Get all households with members (for assessments workflow)
-  app.get("/api/households-with-members", async (req, res) => {
+  app.get("/api/households-with-members", requireAuth, requirePermission("intake.view", "application.view", "assessment.view", "recommendation.view"), async (req, res) => {
     try {
-      const householdsWithMembers = await storage.getAllHouseholdsWithMembers();
+      let householdsWithMembers = await storage.getAllHouseholdsWithMembers();
+      const districtScope = getUserDistrictScope(req.user!);
+      if (districtScope) {
+        householdsWithMembers = householdsWithMembers.filter(item => item.household.district === districtScope);
+      }
       res.json(householdsWithMembers);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -101,11 +122,15 @@ export async function registerRoutes(
   });
 
   // Get single household with members
-  app.get("/api/households/:id", async (req, res) => {
+  app.get("/api/households/:id", requireAuth, requirePermission("intake.view", "application.view", "assessment.view", "recommendation.view", "home_visit.view"), async (req, res) => {
     try {
       const household = await storage.getHouseholdWithMembers(req.params.id);
       if (!household) {
         return res.status(404).json({ error: "Household not found" });
+      }
+      const districtScope = getUserDistrictScope(req.user!);
+      if (districtScope && household.household.district !== districtScope) {
+        return res.status(403).json({ error: "Access denied: outside your assigned district" });
       }
       res.json(household);
     } catch (error: any) {
@@ -114,8 +139,15 @@ export async function registerRoutes(
   });
 
   // Update household status
-  app.patch("/api/households/:id/status", async (req, res) => {
+  app.patch("/api/households/:id/status", requireAuth, requirePermission("application.edit", "recommendation.create"), async (req, res) => {
     try {
+      const districtScope = getUserDistrictScope(req.user!);
+      if (districtScope) {
+        const existing = await storage.getHousehold(req.params.id);
+        if (existing && existing.district !== districtScope) {
+          return res.status(403).json({ error: "Access denied: outside your assigned district" });
+        }
+      }
       const { status } = req.body;
       await storage.updateHouseholdStatus(req.params.id, status);
       const household = await storage.getHousehold(req.params.id);
@@ -126,12 +158,19 @@ export async function registerRoutes(
   });
 
   // Update household with members
-  app.put("/api/households/:id", async (req, res) => {
+  app.put("/api/households/:id", requireAuth, requirePermission("application.edit", "intake.edit"), async (req, res) => {
     try {
       const householdId = req.params.id;
+      const districtScope = getUserDistrictScope(req.user!);
+      if (districtScope) {
+        const existing = await storage.getHousehold(householdId);
+        if (existing && existing.district !== districtScope) {
+          return res.status(403).json({ error: "Access denied: outside your assigned district" });
+        }
+      }
       const householdData = req.body.household;
       const membersData = req.body.members || [];
-      
+
       const updatedHousehold = await storage.updateHousehold(householdId, householdData, membersData);
       res.json(updatedHousehold);
     } catch (error: any) {
@@ -140,10 +179,10 @@ export async function registerRoutes(
   });
 
   // Update home visit details
-  app.put("/api/households/:id/home-visit", async (req, res) => {
+  app.put("/api/households/:id/home-visit", requireAuth, requirePermission("home_visit.view", "application.edit"), async (req, res) => {
     try {
       const householdId = req.params.id;
-      
+
       const homeVisitSchema = z.object({
         householdDetails: z.object({
           roofType: z.string().optional().nullable(),
@@ -156,10 +195,10 @@ export async function registerRoutes(
         })),
         complete: z.boolean().optional().default(false),
       });
-      
+
       const validatedData = homeVisitSchema.parse(req.body);
       const { householdDetails, members, complete } = validatedData;
-      
+
       const householdUpdate: any = {
         roofType: householdDetails.roofType || null,
         wallType: householdDetails.wallType || null,
@@ -168,13 +207,12 @@ export async function registerRoutes(
         homeVisitStatus: complete ? 'completed' : 'pending',
         homeVisitDate: complete ? new Date() : null,
       };
-      
-      // When home visit is completed, set status to pending_assessment and assign to social worker
+
       if (complete) {
         householdUpdate.programStatus = 'pending_assessment';
         householdUpdate.assessmentStep = 'social_worker';
       }
-      
+
       const updatedHousehold = await storage.updateHousehold(householdId, householdUpdate, members);
       res.json(updatedHousehold);
     } catch (error: any) {
@@ -185,8 +223,8 @@ export async function registerRoutes(
     }
   });
 
-  // Get related applications for a household (other applications by same members)
-  app.get("/api/households/:id/related-applications", async (req, res) => {
+  // Get related applications for a household
+  app.get("/api/households/:id/related-applications", requireAuth, requirePermission("intake.view", "application.view"), async (req, res) => {
     try {
       const householdId = req.params.id;
       const currentHousehold = await storage.getHouseholdWithMembers(householdId);
@@ -198,7 +236,6 @@ export async function registerRoutes(
         .filter(m => m.nationalId)
         .map(m => m.nationalId!.trim().toUpperCase());
 
-      // Also collect name+DOB pairs for members without national IDs
       const nameDobPairs = currentHousehold.members
         .filter(m => m.firstName && m.lastName && m.dateOfBirth)
         .map(m => ({
@@ -212,15 +249,14 @@ export async function registerRoutes(
       }
 
       const relatedApplications = await storage.findRelatedApplications(householdId, nationalIds, nameDobPairs);
-
       res.json(relatedApplications);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Get prior home visit data for the applicant (from another completed application)
-  app.get("/api/households/:id/prior-home-visit", async (req, res) => {
+  // Get prior home visit data for the applicant
+  app.get("/api/households/:id/prior-home-visit", requireAuth, requirePermission("home_visit.view", "application.view"), async (req, res) => {
     try {
       const householdId = req.params.id;
       const currentHousehold = await storage.getHouseholdWithMembers(householdId);
@@ -228,7 +264,6 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Household not found" });
       }
 
-      // Get the head of household (the applicant)
       const head = currentHousehold.members.find(m => m.isHead) || currentHousehold.members[0];
       if (!head) {
         return res.json({ found: false });
@@ -249,7 +284,6 @@ export async function registerRoutes(
 
       const relatedApps = await storage.findRelatedApplications(householdId, nationalIds, nameDobPairs);
 
-      // Find the most recent one with a completed home visit
       const completedApps = relatedApps
         .filter(r => r.household.homeVisitStatus === 'completed')
         .sort((a: any, b: any) => {
@@ -262,7 +296,6 @@ export async function registerRoutes(
         return res.json({ found: false });
       }
 
-      // Fetch full household+members data for the most recent completed one
       const priorHousehold = await storage.getHouseholdWithMembers(completedApps[0].household.id);
       if (!priorHousehold) {
         return res.json({ found: false });
@@ -283,15 +316,15 @@ export async function registerRoutes(
   // ===== REGISTRY LOOKUP =====
 
   // Check for duplicate National ID
-  app.get("/api/registry/check-national-id/:nationalId", async (req, res) => {
+  app.get("/api/registry/check-national-id/:nationalId", requireAuth, requirePermission("intake.create", "intake.view"), async (req, res) => {
     try {
       const nationalId = req.params.nationalId.trim();
       if (!nationalId || nationalId.length < 3) {
         return res.status(400).json({ error: "National ID must be at least 3 characters" });
       }
-      
+
       const result = await storage.findMemberByNationalId(nationalId);
-      
+
       if (result) {
         res.json({
           found: true,
@@ -308,14 +341,13 @@ export async function registerRoutes(
   });
 
   // Search members by last name
-  app.get("/api/registry/search-by-lastname/:lastName", async (req, res) => {
+  app.get("/api/registry/search-by-lastname/:lastName", requireAuth, requirePermission("intake.create", "intake.view"), async (req, res) => {
     try {
       const lastName = req.params.lastName.trim();
       if (!lastName || lastName.length < 2) {
         return res.status(400).json({ error: "Last name must be at least 2 characters" });
       }
       const results = await storage.findMembersByLastName(lastName);
-      // Deduplicate: return one entry per unique person (head members grouped by household)
       const matches = results.map(r => ({
         memberId: r.member.id,
         firstName: r.member.firstName,
@@ -339,21 +371,20 @@ export async function registerRoutes(
   });
 
   // ===== ASSESSMENTS =====
-  
+
   // Create assessment
-  app.post("/api/assessments", async (req, res) => {
+  app.post("/api/assessments", requireAuth, requirePermission("assessment.view", "recommendation.create"), async (req, res) => {
     try {
       const assessmentData = insertAssessmentSchema.parse(req.body);
-      
+
       const assessment = await storage.createAssessment(assessmentData);
-      
-      // Update household status based on decision
+
       if (assessmentData.decision === 'eligible') {
         await storage.updateHouseholdStatus(assessmentData.householdId, 'enrolled');
       } else if (assessmentData.decision === 'ineligible') {
         await storage.updateHouseholdStatus(assessmentData.householdId, 'ineligible');
       }
-      
+
       res.json(assessment);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -361,7 +392,7 @@ export async function registerRoutes(
   });
 
   // Get assessments for household
-  app.get("/api/households/:householdId/assessments", async (req, res) => {
+  app.get("/api/households/:householdId/assessments", requireAuth, requirePermission("assessment.view", "recommendation.view"), async (req, res) => {
     try {
       const assessments = await storage.getAssessmentsForHousehold(req.params.householdId);
       res.json(assessments);
@@ -371,23 +402,22 @@ export async function registerRoutes(
   });
 
   // ===== GRIEVANCES =====
-  
+
   // Create grievance
-  app.post("/api/grievances", async (req, res) => {
+  app.post("/api/grievances", requireAuth, requirePermission("intake.create", "application.create"), async (req, res) => {
     try {
       const grievanceData = insertGrievanceSchema.parse(req.body);
-      
-      // Generate grievance code (GR-YYYY-XXX format)
+
       const year = new Date().getFullYear();
       const allGrievances = await storage.getAllGrievances();
       const count = allGrievances.length + 1;
       const grievanceCode = `GR-${year}-${String(count).padStart(3, '0')}`;
-      
+
       const grievance = await storage.createGrievance({
         ...grievanceData,
         grievanceCode
       });
-      
+
       res.json(grievance);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -395,7 +425,7 @@ export async function registerRoutes(
   });
 
   // Get all grievances
-  app.get("/api/grievances", async (req, res) => {
+  app.get("/api/grievances", requireAuth, requirePermission("intake.view", "application.view", "dashboard.view"), async (req, res) => {
     try {
       const grievances = await storage.getAllGrievances();
       res.json(grievances);
@@ -405,7 +435,7 @@ export async function registerRoutes(
   });
 
   // Update grievance status
-  app.patch("/api/grievances/:id/status", async (req, res) => {
+  app.patch("/api/grievances/:id/status", requireAuth, requirePermission("intake.edit", "application.edit"), async (req, res) => {
     try {
       const { status, resolution } = req.body;
       await storage.updateGrievanceStatus(req.params.id, status, resolution);
@@ -417,23 +447,22 @@ export async function registerRoutes(
   });
 
   // ===== PAYMENTS =====
-  
+
   // Create payment
-  app.post("/api/payments", async (req, res) => {
+  app.post("/api/payments", requireAuth, requirePermission("payment.create"), async (req, res) => {
     try {
       const paymentData = insertPaymentSchema.parse(req.body);
-      
-      // Generate payment code (PAY-YYYY-XXX format)
+
       const year = new Date().getFullYear();
       const allPayments = await storage.getAllPayments();
       const count = allPayments.length + 1;
       const paymentCode = `PAY-${year}-${String(count).padStart(3, '0')}`;
-      
+
       const payment = await storage.createPayment({
         ...paymentData,
         paymentCode
       });
-      
+
       res.json(payment);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -441,7 +470,7 @@ export async function registerRoutes(
   });
 
   // Get all payments
-  app.get("/api/payments", async (req, res) => {
+  app.get("/api/payments", requireAuth, requirePermission("payment.view", "dashboard.view"), async (req, res) => {
     try {
       const payments = await storage.getAllPayments();
       res.json(payments);
@@ -451,7 +480,7 @@ export async function registerRoutes(
   });
 
   // Get payments for household
-  app.get("/api/households/:householdId/payments", async (req, res) => {
+  app.get("/api/households/:householdId/payments", requireAuth, requirePermission("payment.view"), async (req, res) => {
     try {
       const payments = await storage.getPaymentsForHousehold(req.params.householdId);
       res.json(payments);
@@ -461,12 +490,12 @@ export async function registerRoutes(
   });
 
   // Update payment status
-  app.patch("/api/payments/:id/status", async (req, res) => {
+  app.patch("/api/payments/:id/status", requireAuth, requirePermission("payment.edit"), async (req, res) => {
     try {
       const { status, disbursementDate } = req.body;
       await storage.updatePaymentStatus(
-        req.params.id, 
-        status, 
+        req.params.id,
+        status,
         disbursementDate ? new Date(disbursementDate) : undefined
       );
       const payment = await storage.getAllPayments();
@@ -477,9 +506,9 @@ export async function registerRoutes(
   });
 
   // ===== CASE ACTIVITIES =====
-  
+
   // Create case activity
-  app.post("/api/case-activities", async (req, res) => {
+  app.post("/api/case-activities", requireAuth, requirePermission("application.edit", "intake.edit"), async (req, res) => {
     try {
       const activityData = insertCaseActivitySchema.parse(req.body);
       const activity = await storage.createCaseActivity(activityData);
@@ -490,7 +519,7 @@ export async function registerRoutes(
   });
 
   // Get case activities for household
-  app.get("/api/households/:householdId/activities", async (req, res) => {
+  app.get("/api/households/:householdId/activities", requireAuth, requirePermission("application.view", "intake.view"), async (req, res) => {
     try {
       const activities = await storage.getCaseActivitiesForHousehold(req.params.householdId);
       res.json(activities);
@@ -500,9 +529,9 @@ export async function registerRoutes(
   });
 
   // ===== USERS =====
-  
+
   // Get all users with roles
-  app.get("/api/users", async (req, res) => {
+  app.get("/api/users", requireAuth, requirePermission("admin.view"), async (req, res) => {
     try {
       const users = await storage.getUsersWithRoles();
       res.json(users);
@@ -512,7 +541,7 @@ export async function registerRoutes(
   });
 
   // Get single user
-  app.get("/api/users/:id", async (req, res) => {
+  app.get("/api/users/:id", requireAuth, requirePermission("admin.view"), async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
       if (!user) {
@@ -525,7 +554,7 @@ export async function registerRoutes(
   });
 
   // Create user
-  app.post("/api/users", async (req, res) => {
+  app.post("/api/users", requireAuth, requirePermission("admin.create"), async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
       const user = await storage.createUser(userData);
@@ -536,7 +565,7 @@ export async function registerRoutes(
   });
 
   // Update user
-  app.patch("/api/users/:id", async (req, res) => {
+  app.patch("/api/users/:id", requireAuth, requirePermission("admin.edit"), async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
       if (!user) {
@@ -550,7 +579,7 @@ export async function registerRoutes(
   });
 
   // Delete user
-  app.delete("/api/users/:id", async (req, res) => {
+  app.delete("/api/users/:id", requireAuth, requirePermission("admin.delete"), async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
       if (!user) {
@@ -564,9 +593,9 @@ export async function registerRoutes(
   });
 
   // ===== ROLES & PERMISSIONS =====
-  
-  // Seed roles and permissions (call once to initialize)
-  app.post("/api/admin/seed-roles", async (req, res) => {
+
+  // Seed roles and permissions (admin only)
+  app.post("/api/admin/seed-roles", requireAuth, requirePermission("admin.create"), async (req, res) => {
     try {
       await storage.seedRolesAndPermissions();
       const roles = await storage.getAllRoles();
@@ -577,7 +606,7 @@ export async function registerRoutes(
   });
 
   // Get all roles
-  app.get("/api/roles", async (req, res) => {
+  app.get("/api/roles", requireAuth, requirePermission("admin.view"), async (req, res) => {
     try {
       const roles = await storage.getAllRoles();
       res.json(roles);
@@ -587,7 +616,7 @@ export async function registerRoutes(
   });
 
   // Get single role with permissions
-  app.get("/api/roles/:id", async (req, res) => {
+  app.get("/api/roles/:id", requireAuth, requirePermission("admin.view"), async (req, res) => {
     try {
       const role = await storage.getRole(req.params.id);
       if (!role) {
@@ -601,7 +630,7 @@ export async function registerRoutes(
   });
 
   // Create role
-  app.post("/api/roles", async (req, res) => {
+  app.post("/api/roles", requireAuth, requirePermission("admin.create"), async (req, res) => {
     try {
       const roleData = insertRoleSchema.parse(req.body);
       const role = await storage.createRole(roleData);
@@ -612,7 +641,7 @@ export async function registerRoutes(
   });
 
   // Update role
-  app.patch("/api/roles/:id", async (req, res) => {
+  app.patch("/api/roles/:id", requireAuth, requirePermission("admin.edit"), async (req, res) => {
     try {
       const role = await storage.getRole(req.params.id);
       if (!role) {
@@ -629,7 +658,7 @@ export async function registerRoutes(
   });
 
   // Delete role
-  app.delete("/api/roles/:id", async (req, res) => {
+  app.delete("/api/roles/:id", requireAuth, requirePermission("admin.delete"), async (req, res) => {
     try {
       const role = await storage.getRole(req.params.id);
       if (!role) {
@@ -646,7 +675,7 @@ export async function registerRoutes(
   });
 
   // Get all permissions
-  app.get("/api/permissions", async (req, res) => {
+  app.get("/api/permissions", requireAuth, requirePermission("admin.view"), async (req, res) => {
     try {
       const permissions = await storage.getAllPermissions();
       res.json(permissions);
@@ -656,7 +685,7 @@ export async function registerRoutes(
   });
 
   // Set role permissions
-  app.put("/api/roles/:id/permissions", async (req, res) => {
+  app.put("/api/roles/:id/permissions", requireAuth, requirePermission("admin.edit"), async (req, res) => {
     try {
       const { permissionIds } = req.body;
       if (!Array.isArray(permissionIds)) {
@@ -671,7 +700,7 @@ export async function registerRoutes(
   });
 
   // Get role permissions
-  app.get("/api/roles/:id/permissions", async (req, res) => {
+  app.get("/api/roles/:id/permissions", requireAuth, requirePermission("admin.view"), async (req, res) => {
     try {
       const permissions = await storage.getRolePermissions(req.params.id);
       res.json(permissions);
@@ -683,7 +712,7 @@ export async function registerRoutes(
   // ===== WORKFLOW HISTORY =====
 
   // Create workflow history entry
-  app.post("/api/workflow-history", async (req, res) => {
+  app.post("/api/workflow-history", requireAuth, requirePermission("recommendation.create"), async (req, res) => {
     try {
       const historyData = insertWorkflowHistorySchema.parse(req.body);
       const history = await storage.createWorkflowHistory(historyData);
@@ -694,7 +723,7 @@ export async function registerRoutes(
   });
 
   // Get workflow history for a household
-  app.get("/api/workflow-history/household/:householdId", async (req, res) => {
+  app.get("/api/workflow-history/household/:householdId", requireAuth, requirePermission("assessment.view", "recommendation.view"), async (req, res) => {
     try {
       const history = await storage.getWorkflowHistoryForHousehold(req.params.householdId);
       res.json(history);
@@ -704,7 +733,7 @@ export async function registerRoutes(
   });
 
   // Get current cycle number for a household
-  app.get("/api/workflow-history/household/:householdId/cycle", async (req, res) => {
+  app.get("/api/workflow-history/household/:householdId/cycle", requireAuth, requirePermission("assessment.view", "recommendation.view"), async (req, res) => {
     try {
       const cycleNumber = await storage.getCurrentCycleNumber(req.params.householdId);
       res.json({ cycleNumber });
@@ -713,24 +742,22 @@ export async function registerRoutes(
     }
   });
 
-  // Atomic workflow progression - creates history and updates household together
-  app.post("/api/workflow-progress/:householdId", async (req, res) => {
+  // Atomic workflow progression
+  app.post("/api/workflow-progress/:householdId", requireAuth, requirePermission("recommendation.create"), async (req, res) => {
     try {
       const { householdId } = req.params;
       const { step, decision, comments, nextStep, householdUpdate } = req.body;
-      
-      // Validate required fields
+
       const validSteps = ['coordinator', 'director', 'permanent_secretary', 'minister'];
       const validDecisions = ['agree', 'disagree', 'requires_further_info'];
-      
+
       if (!validSteps.includes(step)) {
         return res.status(400).json({ error: `Invalid step: ${step}. Must be one of: ${validSteps.join(', ')}` });
       }
       if (!validDecisions.includes(decision)) {
         return res.status(400).json({ error: `Invalid decision: ${decision}. Must be one of: ${validDecisions.join(', ')}` });
       }
-      
-      // Use atomic storage method
+
       const updatedHousehold = await storage.progressWorkflow(
         householdId,
         step,
@@ -739,28 +766,7 @@ export async function registerRoutes(
         nextStep,
         householdUpdate || {}
       );
-      
-      res.json(updatedHousehold);
-    } catch (error: any) {
-      if (error.message === "Household not found") {
-        return res.status(404).json({ error: error.message });
-      }
-      res.status(400).json({ error: error.message });
-    }
-  });
-  
-  // Atomic resubmission - sends application to coordinator with cycle increment if needed
-  app.post("/api/workflow-resubmit/:householdId", async (req, res) => {
-    try {
-      const { householdId } = req.params;
-      const { householdData } = req.body;
-      
-      // Use atomic storage method that checks status and increments cycle server-side
-      const updatedHousehold = await storage.resubmitToCoordinator(
-        householdId,
-        householdData || {}
-      );
-      
+
       res.json(updatedHousehold);
     } catch (error: any) {
       if (error.message === "Household not found") {
@@ -770,7 +776,27 @@ export async function registerRoutes(
     }
   });
 
-  // Health check endpoint
+  // Atomic resubmission
+  app.post("/api/workflow-resubmit/:householdId", requireAuth, requirePermission("recommendation.create"), async (req, res) => {
+    try {
+      const { householdId } = req.params;
+      const { householdData } = req.body;
+
+      const updatedHousehold = await storage.resubmitToCoordinator(
+        householdId,
+        householdData || {}
+      );
+
+      res.json(updatedHousehold);
+    } catch (error: any) {
+      if (error.message === "Household not found") {
+        return res.status(404).json({ error: error.message });
+      }
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Health check endpoint (public)
   app.get("/api/health", (req, res) => {
     res.json({
       status: "ok",

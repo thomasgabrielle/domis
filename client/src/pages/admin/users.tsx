@@ -31,10 +31,18 @@ type UserWithRole = {
   roleId: string | null;
   role: string;
   department: string | null;
+  district: string | null;
   status: string;
   createdAt: string;
   roleData?: Role;
 };
+
+const ALL_DISTRICTS = [
+  "Capital District", "River District", "Highland District",
+  "Coastal District", "Valley District", "Lake District",
+  "Mountain District", "Plains District", "Forest District",
+  "Border District", "Savanna District", "Desert District",
+];
 
 export function AdminUsers() {
   const { toast } = useToast();
@@ -50,6 +58,7 @@ export function AdminUsers() {
     email: "",
     roleId: "",
     department: "",
+    district: "",
     status: "active",
   });
 
@@ -113,6 +122,7 @@ export function AdminUsers() {
       email: "",
       roleId: "",
       department: "",
+      district: "",
       status: "active",
     });
   };
@@ -126,6 +136,7 @@ export function AdminUsers() {
       email: user.email,
       roleId: user.roleId || "",
       department: user.department || "",
+      district: user.district || "",
       status: user.status,
     });
     setIsEditDialogOpen(true);
@@ -135,6 +146,10 @@ export function AdminUsers() {
     createUserMutation.mutate(formData);
   };
 
+  const isSelectedRoleVcc = (roleId: string) => {
+    return roles.find(r => r.id === roleId)?.name === 'vcc_clerk';
+  };
+
   const handleSubmitEdit = () => {
     if (!editingUser) return;
     const updateData: Partial<typeof formData> = {
@@ -142,6 +157,7 @@ export function AdminUsers() {
       email: formData.email,
       roleId: formData.roleId || undefined,
       department: formData.department || undefined,
+      district: isSelectedRoleVcc(formData.roleId) ? formData.district || undefined : undefined,
       status: formData.status,
     };
     if (formData.password) {
@@ -197,7 +213,7 @@ export function AdminUsers() {
           </div>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2" data-testid="add-user-button">
+              <Button className="gap-2" data-testid="add-user-button" onClick={() => resetForm()}>
                 <Plus className="h-4 w-4" /> Add User
               </Button>
             </DialogTrigger>
@@ -274,6 +290,22 @@ export function AdminUsers() {
                     placeholder="e.g. Social Services"
                   />
                 </div>
+                {isSelectedRoleVcc(formData.roleId) && (
+                  <div className="space-y-2">
+                    <Label htmlFor="district">Assigned District</Label>
+                    <Select value={formData.district} onValueChange={(value) => setFormData({ ...formData, district: value })}>
+                      <SelectTrigger data-testid="select-district">
+                        <SelectValue placeholder="Select a district" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ALL_DISTRICTS.map((d) => (
+                          <SelectItem key={d} value={d}>{d}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">VCC Clerks can only access data within their assigned district.</p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
@@ -316,8 +348,10 @@ export function AdminUsers() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>User</TableHead>
+                    <TableHead>Username</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Department</TableHead>
+                    <TableHead>District</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -337,6 +371,9 @@ export function AdminUsers() {
                         </div>
                       </TableCell>
                       <TableCell>
+                        <span className="font-mono text-sm text-muted-foreground">{user.username}</span>
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-1">
                           {user.roleData ? (
                             <>
@@ -352,6 +389,7 @@ export function AdminUsers() {
                         </div>
                       </TableCell>
                       <TableCell>{user.department || "-"}</TableCell>
+                      <TableCell>{user.district || "-"}</TableCell>
                       <TableCell>{getStatusBadge(user.status)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -445,6 +483,22 @@ export function AdminUsers() {
                   onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                 />
               </div>
+              {isSelectedRoleVcc(formData.roleId) && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-district">Assigned District</Label>
+                  <Select value={formData.district} onValueChange={(value) => setFormData({ ...formData, district: value })}>
+                    <SelectTrigger data-testid="edit-select-district">
+                      <SelectValue placeholder="Select a district" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ALL_DISTRICTS.map((d) => (
+                        <SelectItem key={d} value={d}>{d}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">VCC Clerks can only access data within their assigned district.</p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="edit-status">Status</Label>
                 <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>

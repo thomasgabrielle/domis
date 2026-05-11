@@ -11,6 +11,7 @@ import { Download, Search, User, Users, ChevronRight, FileText, X } from "lucide
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/lib/auth";
 
 type HouseholdMember = {
   id: string;
@@ -39,6 +40,8 @@ type RegistryEntry = {
 
 export function Registry() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const isVccClerk = user?.role?.name === 'vcc_clerk';
   const [view, setView] = useState<"household" | "member">("household");
   const [searchTerm, setSearchTerm] = useState("");
   const [provinceFilter, setProvinceFilter] = useState("all");
@@ -202,6 +205,12 @@ export function Registry() {
             <Download className="h-4 w-4" /> Export Registry
           </Button>
         </div>
+
+        {isVccClerk && user?.district && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+            Showing clients for <strong>{user.district}</strong> only.
+          </div>
+        )}
 
         {/* Stats Summary */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
