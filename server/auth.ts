@@ -32,7 +32,7 @@ export function setupAuth(app: Express) {
       store: new PgStore({
         pool,
         tableName: "session",
-        createTableIfMissing: true,
+        createTableIfMissing: false,
       }),
       secret: process.env.SESSION_SECRET || "domis-dev-secret-change-in-production",
       resave: false,
